@@ -1,6 +1,9 @@
+# Overall Structure 
+<img width="798" alt="Screenshot 2025-04-19 at 11 33 58 am copy" src="https://github.com/user-attachments/assets/e74711a2-1ca5-4db1-bb8d-38f283f45085" />
+
 # required library 
-1. airflow task control
-2. fastapi 
+1. Airflow
+2. Dbt  
 3. gradio 
 4. langchian
 5. hugging face 
