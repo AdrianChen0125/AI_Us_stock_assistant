@@ -1,0 +1,125 @@
+[2025-04-08T05:27:33.204+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: weekly_comment_analysis_pipeline.run_bertopic manual__2025-04-08T00:00:00+00:00 [queued]>
+[2025-04-08T05:27:33.208+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: weekly_comment_analysis_pipeline.run_bertopic manual__2025-04-08T00:00:00+00:00 [queued]>
+[2025-04-08T05:27:33.208+0000] {taskinstance.py:2170} INFO - Starting attempt 1 of 1
+[2025-04-08T05:27:33.213+0000] {taskinstance.py:2191} INFO - Executing <Task(PythonOperator): run_bertopic> on 2025-04-08 00:00:00+00:00
+[2025-04-08T05:27:33.220+0000] {standard_task_runner.py:60} INFO - Started process 7919 to run task
+[2025-04-08T05:27:33.225+0000] {standard_task_runner.py:87} INFO - Running: ['***', 'tasks', 'run', 'weekly_comment_analysis_pipeline', 'run_bertopic', 'manual__2025-04-08T00:00:00+00:00', '--job-id', '171', '--raw', '--subdir', 'DAGS_FOLDER/Sentiment_Topicmodelling.py', '--cfg-path', '/tmp/tmpd63yw5by']
+[2025-04-08T05:27:33.229+0000] {standard_task_runner.py:88} INFO - Job 171: Subtask run_bertopic
+[2025-04-08T05:27:33.273+0000] {task_command.py:423} INFO - Running <TaskInstance: weekly_comment_analysis_pipeline.run_bertopic manual__2025-04-08T00:00:00+00:00 [running]> on host 288775c8919d
+[2025-04-08T05:27:33.313+0000] {taskinstance.py:2480} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='weekly_comment_analysis_pipeline' AIRFLOW_CTX_TASK_ID='run_bertopic' AIRFLOW_CTX_EXECUTION_DATE='2025-04-08T00:00:00+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='manual__2025-04-08T00:00:00+00:00'
+[2025-04-08T05:27:33.367+0000] {SentenceTransformer.py:208} INFO - Use pytorch device_name: cpu
+[2025-04-08T05:27:33.367+0000] {SentenceTransformer.py:216} INFO - Load pretrained SentenceTransformer: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+[2025-04-08T05:27:36.729+0000] {file_download.py:1670} WARNING - Xet Storage is enabled for this repo, but the 'hf_xet' package is not installed. Falling back to regular HTTP download. For better performance, install the package with: `pip install huggingface_hub[hf_xet]` or `pip install hf_xet`
+[2025-04-08T05:38:42.489+0000] {file_download.py:1670} WARNING - Xet Storage is enabled for this repo, but the 'hf_xet' package is not installed. Falling back to regular HTTP download. For better performance, install the package with: `pip install huggingface_hub[hf_xet]` or `pip install hf_xet`
+[2025-04-08T06:01:42.941+0000] {file_download.py:463} WARNING - Error while downloading from https://cdn-lfs.hf.co/nlptown/bert-base-multilingual-uncased-sentiment/0435c6c12c80a0a2206137c9fa8f6478fce4f4de88ac3d43d0f0e0da3c8c767b?response-content-disposition=inline%3B+filename*%3DUTF-8%27%27model.safetensors%3B+filename%3D%22model.safetensors%22%3B&Expires=1744094067&Policy=eyJTdGF0ZW1lbnQiOlt7IkNvbmRpdGlvbiI6eyJEYXRlTGVzc1RoYW4iOnsiQVdTOkVwb2NoVGltZSI6MTc0NDA5NDA2N319LCJSZXNvdXJjZSI6Imh0dHBzOi8vY2RuLWxmcy5oZi5jby9ubHB0b3duL2JlcnQtYmFzZS1tdWx0aWxpbmd1YWwtdW5jYXNlZC1zZW50aW1lbnQvMDQzNWM2YzEyYzgwYTBhMjIwNjEzN2M5ZmE4ZjY0NzhmY2U0ZjRkZTg4YWMzZDQzZDBmMGUwZGEzYzhjNzY3Yj9yZXNwb25zZS1jb250ZW50LWRpc3Bvc2l0aW9uPSoifV19&Signature=Xy-3FKeJEFA680ufubFmUnNIGaSADtpWuL82xecul0KbPyJ3Bltur838N-mMRU6g2hZURC5c7itHdI9NwkVN-oDcRf%7ERy8kwUiQGqKsYHMnsdZHIX66WsUWs3vfsaoU03nOhYy45sTeQWO4zVkAgnes1uBWUQyHgvxi8kRuK2Fiu77skAkbyf1jcVzjQhF09pvHcAXSAfEI8fvqBzsxo%7EbBgW0Ur8-mp6gi0ho0B8zuGKxV8jWqpTG7NpBwbuNYBtPNMJWjzDgO8aKBGZwP-lGshbcIGE4zOfKHAKGEG%7ENjJqeslVVSH6%7Eb-yRp1GOwPNoImExMYFBjn2GHxskhAlw__&Key-Pair-Id=K3RPWS32NSSJCE: HTTPSConnectionPool(host='cdn-lfs.hf.co', port=443): Read timed out.
+Trying to resume download...
+[2025-04-08T06:07:00.429+0000] {local_task_job_runner.py:302} WARNING - State of this instance has been externally set to success. Terminating instance.
+[2025-04-08T06:07:00.441+0000] {process_utils.py:131} INFO - Sending 15 to group 7919. PIDs of all processes in the group: [7919]
+[2025-04-08T06:07:00.441+0000] {process_utils.py:86} INFO - Sending the signal 15 to group 7919
+[2025-04-08T06:07:00.443+0000] {taskinstance.py:2450} ERROR - Received SIGTERM. Terminating subprocesses.
+[2025-04-08T06:07:00.451+0000] {taskinstance.py:2698} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.8/site-packages/urllib3/response.py", line 444, in _error_catcher
+    yield
+  File "/home/airflow/.local/lib/python3.8/site-packages/urllib3/response.py", line 567, in read
+    data = self._fp_read(amt) if not fp_closed else b""
+  File "/home/airflow/.local/lib/python3.8/site-packages/urllib3/response.py", line 533, in _fp_read
+    return self._fp.read(amt) if amt is not None else self._fp.read()
+  File "/usr/local/lib/python3.8/http/client.py", line 459, in read
+    n = self.readinto(b)
+  File "/usr/local/lib/python3.8/http/client.py", line 503, in readinto
+    n = self.fp.readinto(b)
+  File "/usr/local/lib/python3.8/socket.py", line 669, in readinto
+    return self._sock.recv_into(b)
+  File "/usr/local/lib/python3.8/ssl.py", line 1274, in recv_into
+    return self.read(nbytes, buffer)
+  File "/usr/local/lib/python3.8/ssl.py", line 1132, in read
+    return self._sslobj.read(len, buffer)
+socket.timeout: The read operation timed out
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.8/site-packages/requests/models.py", line 816, in generate
+    yield from self.raw.stream(chunk_size, decode_content=True)
+  File "/home/airflow/.local/lib/python3.8/site-packages/urllib3/response.py", line 628, in stream
+    data = self.read(amt=amt, decode_content=decode_content)
+  File "/home/airflow/.local/lib/python3.8/site-packages/urllib3/response.py", line 593, in read
+    raise IncompleteRead(self._fp_bytes_read, self.length_remaining)
+  File "/usr/local/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/airflow/.local/lib/python3.8/site-packages/urllib3/response.py", line 449, in _error_catcher
+    raise ReadTimeoutError(self._pool, None, "Read timed out.")
+urllib3.exceptions.ReadTimeoutError: HTTPSConnectionPool(host='cdn-lfs.hf.co', port=443): Read timed out.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.8/site-packages/huggingface_hub/file_download.py", line 449, in http_get
+    for chunk in r.iter_content(chunk_size=constants.DOWNLOAD_CHUNK_SIZE):
+  File "/home/airflow/.local/lib/python3.8/site-packages/requests/models.py", line 822, in generate
+    raise ConnectionError(e)
+requests.exceptions.ConnectionError: HTTPSConnectionPool(host='cdn-lfs.hf.co', port=443): Read timed out.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.8/site-packages/transformers/modeling_utils.py", line 3809, in from_pretrained
+    resolved_archive_file = cached_file(pretrained_model_name_or_path, filename, **cached_file_kwargs)
+  File "/home/airflow/.local/lib/python3.8/site-packages/transformers/utils/hub.py", line 403, in cached_file
+    resolved_file = hf_hub_download(
+  File "/home/airflow/.local/lib/python3.8/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+    return fn(*args, **kwargs)
+  File "/home/airflow/.local/lib/python3.8/site-packages/huggingface_hub/file_download.py", line 961, in hf_hub_download
+    return _hf_hub_download_to_cache_dir(
+  File "/home/airflow/.local/lib/python3.8/site-packages/huggingface_hub/file_download.py", line 1112, in _hf_hub_download_to_cache_dir
+    _download_to_tmp_and_move(
+  File "/home/airflow/.local/lib/python3.8/site-packages/huggingface_hub/file_download.py", line 1675, in _download_to_tmp_and_move
+    http_get(
+  File "/home/airflow/.local/lib/python3.8/site-packages/huggingface_hub/file_download.py", line 466, in http_get
+    return http_get(
+  File "/home/airflow/.local/lib/python3.8/site-packages/huggingface_hub/file_download.py", line 449, in http_get
+    for chunk in r.iter_content(chunk_size=constants.DOWNLOAD_CHUNK_SIZE):
+  File "/home/airflow/.local/lib/python3.8/site-packages/requests/models.py", line 816, in generate
+    yield from self.raw.stream(chunk_size, decode_content=True)
+  File "/home/airflow/.local/lib/python3.8/site-packages/urllib3/response.py", line 628, in stream
+    data = self.read(amt=amt, decode_content=decode_content)
+  File "/home/airflow/.local/lib/python3.8/site-packages/urllib3/response.py", line 567, in read
+    data = self._fp_read(amt) if not fp_closed else b""
+  File "/home/airflow/.local/lib/python3.8/site-packages/urllib3/response.py", line 533, in _fp_read
+    return self._fp.read(amt) if amt is not None else self._fp.read()
+  File "/usr/local/lib/python3.8/http/client.py", line 459, in read
+    n = self.readinto(b)
+  File "/usr/local/lib/python3.8/http/client.py", line 503, in readinto
+    n = self.fp.readinto(b)
+  File "/usr/local/lib/python3.8/socket.py", line 669, in readinto
+    return self._sock.recv_into(b)
+  File "/usr/local/lib/python3.8/ssl.py", line 1274, in recv_into
+    return self.read(nbytes, buffer)
+  File "/usr/local/lib/python3.8/ssl.py", line 1132, in read
+    return self._sslobj.read(len, buffer)
+  File "/home/airflow/.local/lib/python3.8/site-packages/airflow/models/taskinstance.py", line 2452, in signal_handler
+    raise AirflowException("Task received SIGTERM signal")
+airflow.exceptions.AirflowException: Task received SIGTERM signal
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.8/site-packages/airflow/models/taskinstance.py", line 433, in _execute_task
+    result = execute_callable(context=context, **execute_callable_kwargs)
+  File "/home/airflow/.local/lib/python3.8/site-packages/airflow/operators/python.py", line 199, in execute
+    return_value = self.execute_callable()
+  File "/home/airflow/.local/lib/python3.8/site-packages/airflow/operators/python.py", line 216, in execute_callable
+    return self.python_callable(*self.op_args, **self.op_kwargs)
+  File "/opt/airflow/dags/Sentiment_Topicmodelling.py", line 81, in run_bertopic
+    sentiment = analyze_sentiment(texts[i])
+  File "/opt/airflow/dags/Sentiment_Topicmodelling.py", line 56, in analyze_sentiment
+    model = AutoModelForSequenceClassification.from_pretrained(model_name)
+  File "/home/airflow/.local/lib/python3.8/site-packages/transformers/models/auto/auto_factory.py", line 564, in from_pretrained
+    return model_class.from_pretrained(
+  File "/home/airflow/.local/lib/python3.8/site-packages/transformers/modeling_utils.py", line 3925, in from_pretrained
+    raise EnvironmentError(
+OSError: Can't load the model for 'nlptown/bert-base-multilingual-uncased-sentiment'. If you were trying to load it from 'https://huggingface.co/models', make sure you don't have a local directory with the same name. Otherwise, make sure 'nlptown/bert-base-multilingual-uncased-sentiment' is the correct path to a directory containing a file named pytorch_model.bin, tf_model.h5, model.ckpt or flax_model.msgpack.
+[2025-04-08T06:07:00.487+0000] {taskinstance.py:1138} INFO - Marking task as FAILED. dag_id=weekly_comment_analysis_pipeline, task_id=run_bertopic, execution_date=20250408T000000, start_date=20250408T052733, end_date=20250408T060700
+[2025-04-08T06:07:00.500+0000] {standard_task_runner.py:107} ERROR - Failed to execute job 171 for task run_bertopic (Can't load the model for 'nlptown/bert-base-multilingual-uncased-sentiment'. If you were trying to load it from 'https://huggingface.co/models', make sure you don't have a local directory with the same name. Otherwise, make sure 'nlptown/bert-base-multilingual-uncased-sentiment' is the correct path to a directory containing a file named pytorch_model.bin, tf_model.h5, model.ckpt or flax_model.msgpack.; 7919)
+[2025-04-08T06:07:00.540+0000] {process_utils.py:79} INFO - Process psutil.Process(pid=7919, status='terminated', exitcode=1, started='05:27:32') (7919) terminated with exit code 1

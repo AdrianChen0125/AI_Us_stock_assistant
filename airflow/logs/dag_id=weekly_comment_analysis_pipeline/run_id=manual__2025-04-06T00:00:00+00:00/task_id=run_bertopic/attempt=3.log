@@ -1,0 +1,32 @@
+[2025-04-12T17:47:04.394+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: weekly_comment_analysis_pipeline.run_bertopic manual__2025-04-06T00:00:00+00:00 [queued]>
+[2025-04-12T17:47:04.397+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: weekly_comment_analysis_pipeline.run_bertopic manual__2025-04-06T00:00:00+00:00 [queued]>
+[2025-04-12T17:47:04.398+0000] {taskinstance.py:2170} INFO - Starting attempt 3 of 3
+[2025-04-12T17:47:04.406+0000] {taskinstance.py:2191} INFO - Executing <Task(PythonOperator): run_bertopic> on 2025-04-06 00:00:00+00:00
+[2025-04-12T17:47:04.413+0000] {standard_task_runner.py:60} INFO - Started process 79275 to run task
+[2025-04-12T17:47:04.415+0000] {standard_task_runner.py:87} INFO - Running: ['***', 'tasks', 'run', 'weekly_comment_analysis_pipeline', 'run_bertopic', 'manual__2025-04-06T00:00:00+00:00', '--job-id', '274', '--raw', '--subdir', 'DAGS_FOLDER/Sentiment_Topicmodelling.py', '--cfg-path', '/tmp/tmp5drmeqtf']
+[2025-04-12T17:47:04.417+0000] {standard_task_runner.py:88} INFO - Job 274: Subtask run_bertopic
+[2025-04-12T17:47:04.451+0000] {task_command.py:423} INFO - Running <TaskInstance: weekly_comment_analysis_pipeline.run_bertopic manual__2025-04-06T00:00:00+00:00 [running]> on host b22c3b1dd6e4
+[2025-04-12T17:47:04.502+0000] {taskinstance.py:2480} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='weekly_comment_analysis_pipeline' AIRFLOW_CTX_TASK_ID='run_bertopic' AIRFLOW_CTX_EXECUTION_DATE='2025-04-06T00:00:00+00:00' AIRFLOW_CTX_TRY_NUMBER='3' AIRFLOW_CTX_DAG_RUN_ID='manual__2025-04-06T00:00:00+00:00'
+[2025-04-12T17:47:04.554+0000] {SentenceTransformer.py:208} INFO - Use pytorch device_name: cpu
+[2025-04-12T17:47:04.554+0000] {SentenceTransformer.py:216} INFO - Load pretrained SentenceTransformer: sentence-transformers/all-MiniLM-L6-v2
+[2025-04-12T17:47:34.682+0000] {local_task_job_runner.py:302} WARNING - State of this instance has been externally set to skipped. Terminating instance.
+[2025-04-12T17:47:34.687+0000] {process_utils.py:131} INFO - Sending 15 to group 79275. PIDs of all processes in the group: [79275]
+[2025-04-12T17:47:34.688+0000] {process_utils.py:86} INFO - Sending the signal 15 to group 79275
+[2025-04-12T17:47:34.694+0000] {taskinstance.py:2450} ERROR - Received SIGTERM. Terminating subprocesses.
+[2025-04-12T17:47:34.745+0000] {process_utils.py:79} INFO - Process psutil.Process(pid=79275, status='terminated', exitcode=0, started='17:47:03') (79275) terminated with exit code 0
+[2025-04-13T00:03:44.923+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: weekly_comment_analysis_pipeline.run_bertopic manual__2025-04-06T00:00:00+00:00 [queued]>
+[2025-04-13T00:03:44.926+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: weekly_comment_analysis_pipeline.run_bertopic manual__2025-04-06T00:00:00+00:00 [queued]>
+[2025-04-13T00:03:44.926+0000] {taskinstance.py:2170} INFO - Starting attempt 3 of 3
+[2025-04-13T00:03:44.930+0000] {taskinstance.py:2191} INFO - Executing <Task(PythonOperator): run_bertopic> on 2025-04-06 00:00:00+00:00
+[2025-04-13T00:03:44.935+0000] {standard_task_runner.py:60} INFO - Started process 3233 to run task
+[2025-04-13T00:03:44.937+0000] {standard_task_runner.py:87} INFO - Running: ['***', 'tasks', 'run', 'weekly_comment_analysis_pipeline', 'run_bertopic', 'manual__2025-04-06T00:00:00+00:00', '--job-id', '291', '--raw', '--subdir', 'DAGS_FOLDER/Sentiment_Topicmodelling.py', '--cfg-path', '/tmp/tmpnfmd3ft1']
+[2025-04-13T00:03:44.938+0000] {standard_task_runner.py:88} INFO - Job 291: Subtask run_bertopic
+[2025-04-13T00:03:44.958+0000] {task_command.py:423} INFO - Running <TaskInstance: weekly_comment_analysis_pipeline.run_bertopic manual__2025-04-06T00:00:00+00:00 [running]> on host 61c0c751e7f9
+[2025-04-13T00:03:44.986+0000] {taskinstance.py:2480} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='weekly_comment_analysis_pipeline' AIRFLOW_CTX_TASK_ID='run_bertopic' AIRFLOW_CTX_EXECUTION_DATE='2025-04-06T00:00:00+00:00' AIRFLOW_CTX_TRY_NUMBER='3' AIRFLOW_CTX_DAG_RUN_ID='manual__2025-04-06T00:00:00+00:00'
+[2025-04-13T00:03:45.024+0000] {SentenceTransformer.py:208} INFO - Use pytorch device_name: cpu
+[2025-04-13T00:03:45.024+0000] {SentenceTransformer.py:216} INFO - Load pretrained SentenceTransformer: sentence-transformers/all-MiniLM-L6-v2
+[2025-04-13T00:24:17.585+0000] {local_task_job_runner.py:302} WARNING - State of this instance has been externally set to failed. Terminating instance.
+[2025-04-13T00:24:17.589+0000] {process_utils.py:131} INFO - Sending 15 to group 3233. PIDs of all processes in the group: [3233]
+[2025-04-13T00:24:17.590+0000] {process_utils.py:86} INFO - Sending the signal 15 to group 3233
+[2025-04-13T00:24:17.592+0000] {taskinstance.py:2450} ERROR - Received SIGTERM. Terminating subprocesses.
+[2025-04-13T00:24:17.689+0000] {process_utils.py:79} INFO - Process psutil.Process(pid=3233, status='terminated', exitcode=0, started='00:03:44') (3233) terminated with exit code 0

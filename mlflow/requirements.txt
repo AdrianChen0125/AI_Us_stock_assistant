@@ -1,0 +1,7 @@
+mlflow
+transformers
+torch
+pandas
+scikit-learn
+pymysql
+cryptography

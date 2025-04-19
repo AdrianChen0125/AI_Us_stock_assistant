@@ -1,0 +1,13 @@
+[2025-04-08T05:10:23.697+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: youtube_comment_pipeline_us_stocks_daily.filter_with_openai scheduled__2025-04-07T00:00:00+00:00 [queued]>
+[2025-04-08T05:10:23.699+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: youtube_comment_pipeline_us_stocks_daily.filter_with_openai scheduled__2025-04-07T00:00:00+00:00 [queued]>
+[2025-04-08T05:10:23.700+0000] {taskinstance.py:2170} INFO - Starting attempt 1 of 1
+[2025-04-08T05:10:23.703+0000] {taskinstance.py:2191} INFO - Executing <Task(PythonOperator): filter_with_openai> on 2025-04-07 00:00:00+00:00
+[2025-04-08T05:10:23.706+0000] {standard_task_runner.py:60} INFO - Started process 6975 to run task
+[2025-04-08T05:10:23.707+0000] {standard_task_runner.py:87} INFO - Running: ['***', 'tasks', 'run', 'youtube_comment_pipeline_us_stocks_daily', 'filter_with_openai', 'scheduled__2025-04-07T00:00:00+00:00', '--job-id', '166', '--raw', '--subdir', 'DAGS_FOLDER/youtube_comment_pipeline.py', '--cfg-path', '/tmp/tmpd16wgsiy']
+[2025-04-08T05:10:23.709+0000] {standard_task_runner.py:88} INFO - Job 166: Subtask filter_with_openai
+[2025-04-08T05:10:23.727+0000] {task_command.py:423} INFO - Running <TaskInstance: youtube_comment_pipeline_us_stocks_daily.filter_with_openai scheduled__2025-04-07T00:00:00+00:00 [running]> on host 288775c8919d
+[2025-04-08T05:10:23.757+0000] {taskinstance.py:2480} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='youtube_comment_pipeline_us_stocks_daily' AIRFLOW_CTX_TASK_ID='filter_with_openai' AIRFLOW_CTX_EXECUTION_DATE='2025-04-07T00:00:00+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='scheduled__2025-04-07T00:00:00+00:00'
+[2025-04-08T05:10:48.090+0000] {python.py:201} INFO - Done. Returned value was: None
+[2025-04-08T05:10:48.099+0000] {taskinstance.py:1138} INFO - Marking task as SUCCESS. dag_id=youtube_comment_pipeline_us_stocks_daily, task_id=filter_with_openai, execution_date=20250407T000000, start_date=20250408T051023, end_date=20250408T051048
+[2025-04-08T05:10:48.131+0000] {local_task_job_runner.py:234} INFO - Task exited with return code 0
+[2025-04-08T05:10:48.147+0000] {taskinstance.py:3280} INFO - 1 downstream tasks scheduled from follow-on schedule check

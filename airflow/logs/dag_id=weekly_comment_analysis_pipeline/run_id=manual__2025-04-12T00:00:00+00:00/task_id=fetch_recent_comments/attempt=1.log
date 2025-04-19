@@ -1,0 +1,6 @@
+[2025-04-12T13:54:12.104+0000] {taskinstance.py:1946} INFO - Dependencies not met for <TaskInstance: weekly_comment_analysis_pipeline.fetch_recent_comments manual__2025-04-12T00:00:00+00:00 [success]>, dependency 'Task Instance State' FAILED: Task is in the 'success' state.
+[2025-04-12T13:54:12.105+0000] {local_task_job_runner.py:160} INFO - Task is not able to be run
+[2025-04-12T13:54:39.929+0000] {taskinstance.py:1946} INFO - Dependencies not met for <TaskInstance: weekly_comment_analysis_pipeline.fetch_recent_comments manual__2025-04-12T00:00:00+00:00 [skipped]>, dependency 'Task Instance State' FAILED: Task is in the 'skipped' state.
+[2025-04-12T13:54:39.930+0000] {local_task_job_runner.py:160} INFO - Task is not able to be run
+[2025-04-12T13:56:14.502+0000] {taskinstance.py:1946} INFO - Dependencies not met for <TaskInstance: weekly_comment_analysis_pipeline.fetch_recent_comments manual__2025-04-12T00:00:00+00:00 [success]>, dependency 'Task Instance State' FAILED: Task is in the 'success' state.
+[2025-04-12T13:56:14.504+0000] {local_task_job_runner.py:160} INFO - Task is not able to be run

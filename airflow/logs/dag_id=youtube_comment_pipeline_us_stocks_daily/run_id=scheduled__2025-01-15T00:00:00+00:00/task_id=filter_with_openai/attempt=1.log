@@ -1,0 +1,44 @@
+[2025-04-06T01:59:09.980+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: youtube_comment_pipeline_us_stocks_daily.filter_with_openai scheduled__2025-01-15T00:00:00+00:00 [queued]>
+[2025-04-06T01:59:09.997+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: youtube_comment_pipeline_us_stocks_daily.filter_with_openai scheduled__2025-01-15T00:00:00+00:00 [queued]>
+[2025-04-06T01:59:09.998+0000] {taskinstance.py:2170} INFO - Starting attempt 1 of 1
+[2025-04-06T01:59:10.014+0000] {taskinstance.py:2191} INFO - Executing <Task(PythonOperator): filter_with_openai> on 2025-01-15 00:00:00+00:00
+[2025-04-06T01:59:10.018+0000] {standard_task_runner.py:60} INFO - Started process 680 to run task
+[2025-04-06T01:59:10.022+0000] {standard_task_runner.py:87} INFO - Running: ['***', 'tasks', 'run', 'youtube_comment_pipeline_us_stocks_daily', 'filter_with_openai', 'scheduled__2025-01-15T00:00:00+00:00', '--job-id', '33', '--raw', '--subdir', 'DAGS_FOLDER/youtube_comment_pipeline.py', '--cfg-path', '/tmp/tmpqoyihbu6']
+[2025-04-06T01:59:10.025+0000] {standard_task_runner.py:88} INFO - Job 33: Subtask filter_with_openai
+[2025-04-06T01:59:10.084+0000] {task_command.py:423} INFO - Running <TaskInstance: youtube_comment_pipeline_us_stocks_daily.filter_with_openai scheduled__2025-01-15T00:00:00+00:00 [running]> on host 04d9bebcd372
+[2025-04-06T01:59:10.208+0000] {taskinstance.py:2480} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='youtube_comment_pipeline_us_stocks_daily' AIRFLOW_CTX_TASK_ID='filter_with_openai' AIRFLOW_CTX_EXECUTION_DATE='2025-01-15T00:00:00+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='scheduled__2025-01-15T00:00:00+00:00'
+[2025-04-06T01:59:33.261+0000] {_base_client.py:1051} INFO - Retrying request to /chat/completions in 0.120000 seconds
+[2025-04-06T01:59:33.640+0000] {_base_client.py:1051} INFO - Retrying request to /chat/completions in 0.120000 seconds
+[2025-04-06T01:59:34.000+0000] {taskinstance.py:2698} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.8/site-packages/airflow/models/taskinstance.py", line 433, in _execute_task
+    result = execute_callable(context=context, **execute_callable_kwargs)
+  File "/home/airflow/.local/lib/python3.8/site-packages/airflow/operators/python.py", line 199, in execute
+    return_value = self.execute_callable()
+  File "/home/airflow/.local/lib/python3.8/site-packages/airflow/operators/python.py", line 216, in execute_callable
+    return self.python_callable(*self.op_args, **self.op_kwargs)
+  File "/opt/airflow/dags/youtube_comment_pipeline.py", line 44, in filter_with_openai
+    res = client.chat.completions.create(
+  File "/home/airflow/.local/lib/python3.8/site-packages/openai/_utils/_utils.py", line 279, in wrapper
+    return func(*args, **kwargs)
+  File "/home/airflow/.local/lib/python3.8/site-packages/openai/resources/chat/completions/completions.py", line 914, in create
+    return self._post(
+  File "/home/airflow/.local/lib/python3.8/site-packages/openai/_base_client.py", line 1242, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+  File "/home/airflow/.local/lib/python3.8/site-packages/openai/_base_client.py", line 919, in request
+    return self._request(
+  File "/home/airflow/.local/lib/python3.8/site-packages/openai/_base_client.py", line 1008, in _request
+    return self._retry_request(
+  File "/home/airflow/.local/lib/python3.8/site-packages/openai/_base_client.py", line 1057, in _retry_request
+    return self._request(
+  File "/home/airflow/.local/lib/python3.8/site-packages/openai/_base_client.py", line 1008, in _request
+    return self._retry_request(
+  File "/home/airflow/.local/lib/python3.8/site-packages/openai/_base_client.py", line 1057, in _retry_request
+    return self._request(
+  File "/home/airflow/.local/lib/python3.8/site-packages/openai/_base_client.py", line 1023, in _request
+    raise self._make_status_error_from_response(err.response) from None
+openai.RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-3.5-turbo in organization org-PYlsP10wtaK6eP2xH12HLe9n on requests per min (RPM): Limit 500, Used 500, Requested 1. Please try again in 120ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}
+[2025-04-06T01:59:34.009+0000] {taskinstance.py:1138} INFO - Marking task as FAILED. dag_id=youtube_comment_pipeline_us_stocks_daily, task_id=filter_with_openai, execution_date=20250115T000000, start_date=20250406T015909, end_date=20250406T015934
+[2025-04-06T01:59:34.015+0000] {standard_task_runner.py:107} ERROR - Failed to execute job 33 for task filter_with_openai (Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-3.5-turbo in organization org-PYlsP10wtaK6eP2xH12HLe9n on requests per min (RPM): Limit 500, Used 500, Requested 1. Please try again in 120ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}; 680)
+[2025-04-06T01:59:34.041+0000] {local_task_job_runner.py:234} INFO - Task exited with return code 1
+[2025-04-06T01:59:34.052+0000] {taskinstance.py:3280} INFO - 0 downstream tasks scheduled from follow-on schedule check

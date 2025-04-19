@@ -1,0 +1,7 @@
+[2025-04-15T06:35:21.526+0000] {processor.py:161} INFO - Started process (PID=187) to work on /opt/airflow/dags/refresh_materialized_views.py
+[2025-04-15T06:35:21.526+0000] {processor.py:830} INFO - Processing file /opt/airflow/dags/refresh_materialized_views.py for tasks to queue
+[2025-04-15T06:35:21.527+0000] {logging_mixin.py:188} INFO - [2025-04-15T06:35:21.527+0000] {dagbag.py:538} INFO - Filling up the DagBag from /opt/airflow/dags/refresh_materialized_views.py
+[2025-04-15T06:35:21.533+0000] {processor.py:840} INFO - DAG(s) 'refresh_materialized_views' retrieved from /opt/airflow/dags/refresh_materialized_views.py
+[2025-04-15T06:35:21.547+0000] {logging_mixin.py:188} INFO - [2025-04-15T06:35:21.547+0000] {dag.py:3036} INFO - Sync 1 DAGs
+[2025-04-15T06:35:21.557+0000] {logging_mixin.py:188} INFO - [2025-04-15T06:35:21.557+0000] {dag.py:3823} INFO - Setting next_dagrun for refresh_materialized_views to 2025-04-12 06:00:00+00:00, run_after=2025-04-19 06:00:00+00:00
+[2025-04-15T06:35:21.563+0000] {processor.py:183} INFO - Processing /opt/airflow/dags/refresh_materialized_views.py took 0.040 seconds

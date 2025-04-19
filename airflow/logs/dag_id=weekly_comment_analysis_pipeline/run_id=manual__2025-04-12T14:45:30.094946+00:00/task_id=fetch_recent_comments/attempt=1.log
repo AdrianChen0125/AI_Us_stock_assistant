@@ -1,0 +1,15 @@
+[2025-04-12T14:45:34.810+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: weekly_comment_analysis_pipeline.fetch_recent_comments manual__2025-04-12T14:45:30.094946+00:00 [queued]>
+[2025-04-12T14:45:34.812+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: weekly_comment_analysis_pipeline.fetch_recent_comments manual__2025-04-12T14:45:30.094946+00:00 [queued]>
+[2025-04-12T14:45:34.813+0000] {taskinstance.py:2170} INFO - Starting attempt 1 of 1
+[2025-04-12T14:45:34.818+0000] {taskinstance.py:2191} INFO - Executing <Task(PythonOperator): fetch_recent_comments> on 2025-04-12 14:45:30.094946+00:00
+[2025-04-12T14:45:34.825+0000] {standard_task_runner.py:60} INFO - Started process 253 to run task
+[2025-04-12T14:45:34.828+0000] {standard_task_runner.py:87} INFO - Running: ['***', 'tasks', 'run', 'weekly_comment_analysis_pipeline', 'fetch_recent_comments', 'manual__2025-04-12T14:45:30.094946+00:00', '--job-id', '252', '--raw', '--subdir', 'DAGS_FOLDER/Sentiment_Topicmodelling.py', '--cfg-path', '/tmp/tmp7ankagy5']
+[2025-04-12T14:45:34.830+0000] {standard_task_runner.py:88} INFO - Job 252: Subtask fetch_recent_comments
+[2025-04-12T14:45:34.857+0000] {task_command.py:423} INFO - Running <TaskInstance: weekly_comment_analysis_pipeline.fetch_recent_comments manual__2025-04-12T14:45:30.094946+00:00 [running]> on host b22c3b1dd6e4
+[2025-04-12T14:45:34.887+0000] {taskinstance.py:2480} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='weekly_comment_analysis_pipeline' AIRFLOW_CTX_TASK_ID='fetch_recent_comments' AIRFLOW_CTX_EXECUTION_DATE='2025-04-12T14:45:30.094946+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='manual__2025-04-12T14:45:30.094946+00:00'
+[2025-04-12T14:45:34.891+0000] {logging_mixin.py:188} WARNING - /home/***/.local/lib/python3.8/site-packages/***/utils/context.py:315 AirflowContextDeprecationWarning: Accessing 'execution_date' from the template is deprecated and will be removed in a future version. Please use 'data_interval_start' or 'logical_date' instead.
+[2025-04-12T14:45:34.900+0000] {base.py:83} INFO - Using connection ID 'aws_pg' for task execution.
+[2025-04-12T14:45:44.033+0000] {python.py:201} INFO - Done. Returned value was: None
+[2025-04-12T14:45:44.042+0000] {taskinstance.py:1138} INFO - Marking task as SUCCESS. dag_id=weekly_comment_analysis_pipeline, task_id=fetch_recent_comments, execution_date=20250412T144530, start_date=20250412T144534, end_date=20250412T144544
+[2025-04-12T14:45:44.082+0000] {local_task_job_runner.py:234} INFO - Task exited with return code 0
+[2025-04-12T14:45:44.093+0000] {taskinstance.py:3280} INFO - 1 downstream tasks scheduled from follow-on schedule check

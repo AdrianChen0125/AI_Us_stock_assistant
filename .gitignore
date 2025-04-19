@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+env/
+.venv/
+.env/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Mac 系統檔案
+.DS_Store
+
+# VS Code 設定
+.vscode/
+
+# PyCharm 設定
+.idea/
+
+# Logs
+*.log
+
+# 本地憑證、API金鑰等敏感資料
+*.env
+*.key

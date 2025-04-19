@@ -1,0 +1,30 @@
+# Airflow Providers
+apache-airflow-providers-postgres>=5.0.0
+apache-airflow-providers-http
+airflow-provider-mlflow==1.1.0
+# 通用 API 套件
+requests
+openai
+
+# 處理 JSON、時間用（內建其實可略）
+python-dateutil
+simplejson
+
+# Postgres 連線用
+psycopg2-binary
+
+# .env 支援
+python-dotenv
+
+# NLP & ML 模組
+transformers 
+torch 
+langdetect 
+scikit-learn 
+bertopic 
+hf_xet
+tiktoken>=0.5.1
+nltk
+
+# MLflow
+mlflow[extras]==2.3.2 

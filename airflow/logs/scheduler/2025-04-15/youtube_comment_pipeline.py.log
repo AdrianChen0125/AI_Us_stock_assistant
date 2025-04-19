@@ -1,0 +1,7 @@
+[2025-04-15T06:35:20.943+0000] {processor.py:161} INFO - Started process (PID=172) to work on /opt/airflow/dags/youtube_comment_pipeline.py
+[2025-04-15T06:35:20.944+0000] {processor.py:830} INFO - Processing file /opt/airflow/dags/youtube_comment_pipeline.py for tasks to queue
+[2025-04-15T06:35:20.944+0000] {logging_mixin.py:188} INFO - [2025-04-15T06:35:20.944+0000] {dagbag.py:538} INFO - Filling up the DagBag from /opt/airflow/dags/youtube_comment_pipeline.py
+[2025-04-15T06:35:21.442+0000] {processor.py:840} INFO - DAG(s) 'youtube_comment_pipeline_us_stocks_daily' retrieved from /opt/airflow/dags/youtube_comment_pipeline.py
+[2025-04-15T06:35:21.473+0000] {logging_mixin.py:188} INFO - [2025-04-15T06:35:21.473+0000] {dag.py:3036} INFO - Sync 1 DAGs
+[2025-04-15T06:35:21.490+0000] {logging_mixin.py:188} INFO - [2025-04-15T06:35:21.490+0000] {dag.py:3823} INFO - Setting next_dagrun for youtube_comment_pipeline_us_stocks_daily to 2025-04-14 08:00:00+00:00, run_after=2025-04-15 08:00:00+00:00
+[2025-04-15T06:35:21.505+0000] {processor.py:183} INFO - Processing /opt/airflow/dags/youtube_comment_pipeline.py took 0.564 seconds

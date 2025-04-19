@@ -1,0 +1,82 @@
+[2025-04-13T01:33:51.724+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: weekly_comment_analysis_pipeline.clean_texts manual__2025-04-06T00:00:00+00:00 [queued]>
+[2025-04-13T01:33:51.727+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: weekly_comment_analysis_pipeline.clean_texts manual__2025-04-06T00:00:00+00:00 [queued]>
+[2025-04-13T01:33:51.727+0000] {taskinstance.py:2170} INFO - Starting attempt 5 of 5
+[2025-04-13T01:33:51.731+0000] {taskinstance.py:2191} INFO - Executing <Task(PythonOperator): clean_texts> on 2025-04-06 00:00:00+00:00
+[2025-04-13T01:33:51.736+0000] {standard_task_runner.py:60} INFO - Started process 249 to run task
+[2025-04-13T01:33:51.738+0000] {standard_task_runner.py:87} INFO - Running: ['***', 'tasks', 'run', 'weekly_comment_analysis_pipeline', 'clean_texts', 'manual__2025-04-06T00:00:00+00:00', '--job-id', '304', '--raw', '--subdir', 'DAGS_FOLDER/Sentiment_Topicmodelling.py', '--cfg-path', '/tmp/tmp9tja6jkz']
+[2025-04-13T01:33:51.741+0000] {standard_task_runner.py:88} INFO - Job 304: Subtask clean_texts
+[2025-04-13T01:33:51.760+0000] {task_command.py:423} INFO - Running <TaskInstance: weekly_comment_analysis_pipeline.clean_texts manual__2025-04-06T00:00:00+00:00 [running]> on host ceaca0b8f45b
+[2025-04-13T01:33:51.793+0000] {taskinstance.py:2480} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='weekly_comment_analysis_pipeline' AIRFLOW_CTX_TASK_ID='clean_texts' AIRFLOW_CTX_EXECUTION_DATE='2025-04-06T00:00:00+00:00' AIRFLOW_CTX_TRY_NUMBER='5' AIRFLOW_CTX_DAG_RUN_ID='manual__2025-04-06T00:00:00+00:00'
+[2025-04-13T01:33:51.838+0000] {taskinstance.py:2698} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.8/site-packages/airflow/models/taskinstance.py", line 433, in _execute_task
+    result = execute_callable(context=context, **execute_callable_kwargs)
+  File "/home/airflow/.local/lib/python3.8/site-packages/airflow/operators/python.py", line 199, in execute
+    return_value = self.execute_callable()
+  File "/home/airflow/.local/lib/python3.8/site-packages/airflow/operators/python.py", line 216, in execute_callable
+    return self.python_callable(*self.op_args, **self.op_kwargs)
+  File "/opt/airflow/dags/Sentiment_Topicmodelling.py", line 62, in clean_texts
+    cleaned_text = clean(raw_text)
+  File "/opt/airflow/dags/Sentiment_Topicmodelling.py", line 55, in clean
+    tokens = word_tokenize(text)
+  File "/home/airflow/.local/lib/python3.8/site-packages/nltk/tokenize/__init__.py", line 142, in word_tokenize
+    sentences = [text] if preserve_line else sent_tokenize(text, language)
+  File "/home/airflow/.local/lib/python3.8/site-packages/nltk/tokenize/__init__.py", line 119, in sent_tokenize
+    tokenizer = _get_punkt_tokenizer(language)
+  File "/home/airflow/.local/lib/python3.8/site-packages/nltk/tokenize/__init__.py", line 105, in _get_punkt_tokenizer
+    return PunktTokenizer(language)
+  File "/home/airflow/.local/lib/python3.8/site-packages/nltk/tokenize/punkt.py", line 1744, in __init__
+    self.load_lang(lang)
+  File "/home/airflow/.local/lib/python3.8/site-packages/nltk/tokenize/punkt.py", line 1749, in load_lang
+    lang_dir = find(f"tokenizers/punkt_tab/{lang}/")
+  File "/home/airflow/.local/lib/python3.8/site-packages/nltk/data.py", line 579, in find
+    raise LookupError(resource_not_found)
+LookupError: 
+**********************************************************************
+  Resource [93mpunkt_tab[0m not found.
+  Please use the NLTK Downloader to obtain the resource:
+
+  [31m>>> import nltk
+  >>> nltk.download('punkt_tab')
+  [0m
+  For more information see: https://www.nltk.org/data.html
+
+  Attempted to load [93mtokenizers/punkt_tab/english/[0m
+
+  Searched in:
+    - '/home/***/nltk_data'
+    - '/usr/local/nltk_data'
+    - '/usr/local/share/nltk_data'
+    - '/usr/local/lib/nltk_data'
+    - '/usr/share/nltk_data'
+    - '/usr/local/share/nltk_data'
+    - '/usr/lib/nltk_data'
+    - '/usr/local/lib/nltk_data'
+**********************************************************************
+
+[2025-04-13T01:33:51.842+0000] {taskinstance.py:1138} INFO - Marking task as FAILED. dag_id=weekly_comment_analysis_pipeline, task_id=clean_texts, execution_date=20250406T000000, start_date=20250413T013351, end_date=20250413T013351
+[2025-04-13T01:33:51.847+0000] {standard_task_runner.py:107} ERROR - Failed to execute job 304 for task clean_texts (
+**********************************************************************
+  Resource [93mpunkt_tab[0m not found.
+  Please use the NLTK Downloader to obtain the resource:
+
+  [31m>>> import nltk
+  >>> nltk.download('punkt_tab')
+  [0m
+  For more information see: https://www.nltk.org/data.html
+
+  Attempted to load [93mtokenizers/punkt_tab/english/[0m
+
+  Searched in:
+    - '/home/***/nltk_data'
+    - '/usr/local/nltk_data'
+    - '/usr/local/share/nltk_data'
+    - '/usr/local/lib/nltk_data'
+    - '/usr/share/nltk_data'
+    - '/usr/local/share/nltk_data'
+    - '/usr/lib/nltk_data'
+    - '/usr/local/lib/nltk_data'
+**********************************************************************
+; 249)
+[2025-04-13T01:33:51.881+0000] {local_task_job_runner.py:234} INFO - Task exited with return code 1
+[2025-04-13T01:33:51.892+0000] {taskinstance.py:3280} INFO - 0 downstream tasks scheduled from follow-on schedule check

@@ -1,0 +1,14 @@
+gradio>=3.44.0
+requests
+# postgres 
+psycopg2-binary
+# openai
+openai
+langchain
+langchain-community
+langchain-openai
+wikipedia
+# 數據處理
+pandas
+matplotlib
+plotly

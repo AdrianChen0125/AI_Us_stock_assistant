@@ -1,0 +1,26 @@
+[2025-04-14T05:56:28.178+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: youtube_comment_pipeline_us_stocks_daily.search_youtube manual__2025-04-14T00:00:00+00:00 [queued]>
+[2025-04-14T05:56:28.181+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: youtube_comment_pipeline_us_stocks_daily.search_youtube manual__2025-04-14T00:00:00+00:00 [queued]>
+[2025-04-14T05:56:28.181+0000] {taskinstance.py:2170} INFO - Starting attempt 2 of 2
+[2025-04-14T05:56:28.185+0000] {taskinstance.py:2191} INFO - Executing <Task(PythonOperator): search_youtube> on 2025-04-14 00:00:00+00:00
+[2025-04-14T05:56:28.187+0000] {standard_task_runner.py:60} INFO - Started process 2236 to run task
+[2025-04-14T05:56:28.188+0000] {standard_task_runner.py:87} INFO - Running: ['***', 'tasks', 'run', 'youtube_comment_pipeline_us_stocks_daily', 'search_youtube', 'manual__2025-04-14T00:00:00+00:00', '--job-id', '400', '--raw', '--subdir', 'DAGS_FOLDER/youtube_comment_pipeline.py', '--cfg-path', '/tmp/tmp0m32__pd']
+[2025-04-14T05:56:28.189+0000] {standard_task_runner.py:88} INFO - Job 400: Subtask search_youtube
+[2025-04-14T05:56:28.207+0000] {task_command.py:423} INFO - Running <TaskInstance: youtube_comment_pipeline_us_stocks_daily.search_youtube manual__2025-04-14T00:00:00+00:00 [running]> on host 9d8a82da5923
+[2025-04-14T05:56:28.237+0000] {taskinstance.py:2480} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='youtube_comment_pipeline_us_stocks_daily' AIRFLOW_CTX_TASK_ID='search_youtube' AIRFLOW_CTX_EXECUTION_DATE='2025-04-14T00:00:00+00:00' AIRFLOW_CTX_TRY_NUMBER='2' AIRFLOW_CTX_DAG_RUN_ID='manual__2025-04-14T00:00:00+00:00'
+[2025-04-14T05:56:28.237+0000] {taskinstance.py:2698} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.8/site-packages/airflow/models/taskinstance.py", line 433, in _execute_task
+    result = execute_callable(context=context, **execute_callable_kwargs)
+  File "/home/airflow/.local/lib/python3.8/site-packages/airflow/operators/python.py", line 199, in execute
+    return_value = self.execute_callable()
+  File "/home/airflow/.local/lib/python3.8/site-packages/airflow/operators/python.py", line 216, in execute_callable
+    return self.python_callable(*self.op_args, **self.op_kwargs)
+  File "/opt/airflow/dags/youtube_comment_pipeline.py", line 38, in search_youtube
+    query = get_search_query()
+  File "/opt/airflow/dags/youtube_comment_pipeline.py", line 25, in get_search_query
+    execution_date = context['execution_date']
+KeyError: 'execution_date'
+[2025-04-14T05:56:28.241+0000] {taskinstance.py:1138} INFO - Marking task as FAILED. dag_id=youtube_comment_pipeline_us_stocks_daily, task_id=search_youtube, execution_date=20250414T000000, start_date=20250414T055628, end_date=20250414T055628
+[2025-04-14T05:56:28.246+0000] {standard_task_runner.py:107} ERROR - Failed to execute job 400 for task search_youtube ('execution_date'; 2236)
+[2025-04-14T05:56:28.255+0000] {local_task_job_runner.py:234} INFO - Task exited with return code 1
+[2025-04-14T05:56:28.264+0000] {taskinstance.py:3280} INFO - 0 downstream tasks scheduled from follow-on schedule check
