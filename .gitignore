@@ -7,8 +7,6 @@ dist/
 build/
 
 # Virtual environments
-venv/
-env/
 .venv/
 .env/
 

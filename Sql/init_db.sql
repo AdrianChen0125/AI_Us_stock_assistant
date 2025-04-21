@@ -1,11 +1,4 @@
--- Create DB
-Create ytdb;
-Use ytdb;
 
--- Create schema 
-CREATE SCHEMA raw;
-CREATE SCHEMA processed;
-CREATE SCHEMA product;
 
 -- Create 
 CREATE TABLE videos (
