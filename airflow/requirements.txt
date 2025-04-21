@@ -5,7 +5,7 @@ airflow-provider-mlflow==1.1.0
 # 通用 API 套件
 requests
 openai
-
+praw
 # 處理 JSON、時間用（內建其實可略）
 python-dateutil
 simplejson

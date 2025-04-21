@@ -28,7 +28,7 @@ def fetch_recent_comments(**context):
     conn = hook.get_conn()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT comment_id, text FROM raw_comments
+        SELECT comment_id, text FROM raw_data.youtube_comments
         WHERE DATE(published_at) BETWEEN %s AND %s
     """, (start_date, end_date))
     rows = cursor.fetchall()
@@ -96,9 +96,9 @@ def run_bertopic(**context):
     comments = context['ti'].xcom_pull(key='cleaned_comments')
     
     # 避免處理時間過長
-    if len(comments) > 10000:
-        print(f'comments {len(comments)} over 10000 sampling to 10000')
-        comments = random.sample(comments, 10000)
+    if len(comments) > 5000:
+        print(f'comments {len(comments)} over 5000 sampling to 5000')
+        comments = random.sample(comments, 5000)
 
     texts = [c['text'] for c in comments]
     ids = [c['comment_id'] for c in comments]
@@ -129,7 +129,7 @@ def save_processed_comments(**context):
     conn = hook.get_conn()
     cursor = conn.cursor()
     insert_sql = """
-        INSERT INTO processed_comments (comment_id, sentiment, topic_tags, keywords, processed_at)
+        INSERT INTO processed_data.youtube_comments (comment_id, sentiment, topic_tags, keywords, processed_at)
         VALUES %s
     """
     values = [

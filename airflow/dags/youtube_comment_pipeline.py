@@ -4,44 +4,21 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable
 from airflow.utils.dates import days_ago
 from psycopg2.extras import execute_values
-from datetime import datetime,  timedelta
-import os, requests,random
+from datetime import datetime, timedelta
+import os, requests, random
 from openai import OpenAI
 
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# Flexible query (fallback to default)
-def get_search_query(**context):
-    # 股市關鍵字清單
-    stock_keywords = [
-        "us stocks",
-        "stock market",
-        "nasdaq",
-        "dow jones",
-        "s&p 500",
-    ]
-    
-    dt = datetime.now()       # 取得目前時間（本地時區）
-    year = dt.year  
-    
-    # 隨機選擇 N 個關鍵字組合在一起（可依需要調整 N）
-    selected_keywords = random.sample(stock_keywords, k=3)
-    # 使用 OR 串接關鍵字（YouTube API 支援布林搜尋）
-    query = " OR ".join(f'"{kw}"' for kw in selected_keywords)
-    query += f"and {year}"
-    # 如果 Variable 有設，就用 Variable（保留彈性）
-    return Variable.get("youtube_search_query", default_var=query)
 
-def search_youtube(**context):
-    query = get_search_query()
-    print(query)
-    # 設定時間範圍：過去兩週
-    end_time = context['execution_date']
-    start_time = end_time - timedelta(days=30)
-    print(end_time,start_time)
+def search_youtube(**context):    
+    query = "us stock market news"
+    execution_date = context["execution_date"]
 
-    # 第一階段：用搜尋 API 抓影片 ID
+    published_after = execution_date - timedelta(days=90)
+    published_before = execution_date
+
     search_url = "https://www.googleapis.com/youtube/v3/search"
     search_params = {
         "key": YOUTUBE_API_KEY,
@@ -53,23 +30,26 @@ def search_youtube(**context):
 
     search_res = requests.get(search_url, params=search_params).json()
 
-    # 提取 videoIds
-    video_ids = [
-        item["id"]["videoId"]
-        for item in search_res.get("items", [])
-        if item["id"].get("videoId")
-    ]
+    # Optional: filter locally by date
+    filtered_video_ids = []
+    for item in search_res.get("items", []):
+        video_id = item["id"].get("videoId")
+        published_str = item["snippet"]["publishedAt"] 
+        published_at = datetime.fromisoformat(published_str.replace("Z", "+00:00"))
 
-    if not video_ids:
+        if published_after <= published_at < published_before:
+            filtered_video_ids.append(video_id)
+
+    if not filtered_video_ids:
         context['ti'].xcom_push(key='raw_videos', value=[])
         return
 
-    # 第二階段：用 videos API 抓詳細資訊（含 viewCount）
+    # 🔍 Fetch details
     video_url = "https://www.googleapis.com/youtube/v3/videos"
     video_params = {
         "key": YOUTUBE_API_KEY,
         "part": "snippet,statistics",
-        "id": ",".join(video_ids)
+        "id": ",".join(filtered_video_ids)
     }
 
     video_res = requests.get(video_url, params=video_params).json()
@@ -86,10 +66,10 @@ def search_youtube(**context):
             "views": view_count
         })
 
-    # 根據觀看數排序，取前 10 名
-    top_videos = sorted(videos, key=lambda x: x["views"], reverse=True)[:20]
+    # Sort by views
+    top_videos = sorted(videos, key=lambda x: x["views"], reverse=True)
 
-    # 推送到 XCom
+    # Push to XCom
     context['ti'].xcom_push(key='top_videos', value=top_videos)
 
 def filter_with_openai(**context):
@@ -97,12 +77,12 @@ def filter_with_openai(**context):
 
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     
-    # 抓取正確的 XCom key
+    # Pull XCom value using correct key
     videos = context['ti'].xcom_pull(key='top_videos', task_ids='search_youtube')
     filtered = []
 
     if not videos:
-        print("⚠️ No videos found to filter.")
+        print(" No videos found to filter.")
         context['ti'].xcom_push(key='filtered_videos', value=[])
         return
 
@@ -123,33 +103,13 @@ def filter_with_openai(**context):
 
     context['ti'].xcom_push(key='filtered_videos', value=filtered)
 
-
-def select_top_videos(**context):
-    videos = context['ti'].xcom_pull(key='filtered_videos')
-    ids = ",".join([v["video_id"] for v in videos])
-    url = "https://www.googleapis.com/youtube/v3/videos"
-    params = {
-        "key": YOUTUBE_API_KEY,
-        "id": ids,
-        "part": "statistics,snippet"
-    }
-    res = requests.get(url, params=params).json()
-    sorted_videos = sorted(res["items"], key=lambda v: int(v["statistics"].get("viewCount", 0)), reverse=True)
-    top_15 = [{
-        "video_id": v["id"],
-        "title": v["snippet"]["title"],
-        "channel": v["snippet"]["channelTitle"],
-        "views": v["statistics"]["viewCount"]
-    } for v in sorted_videos[:15]]
-    context['ti'].xcom_push(key='top_videos_', value=top_15)
-
 def collect_comments(**context):
-    top_videos = context['ti'].xcom_pull(key='top_videos_')
+    top_videos = context['ti'].xcom_pull(key='filtered_videos')
     all_comments = []
 
-    execution_date = context['execution_date']  # Airflow 提供的執行時間 (UTC)
-    start_time = execution_date - timedelta(days=1)  
-    end_time = execution_date  # 今天 00:00 UTC
+    execution_date = context['execution_date']  
+    start_time = execution_date 
+    end_time = execution_date + timedelta(days=1)
 
     for video in top_videos:
         url = "https://www.googleapis.com/youtube/v3/commentThreads"
@@ -177,43 +137,42 @@ def collect_comments(**context):
                 if not published_at:
                     continue
 
-                # 轉換成 datetime 物件（保留時間）
+                # Parse to UTC-aware datetime
                 published_dt = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
-                print(published_dt,start_time,end_time)
-                # 僅收集昨天 (UTC) 發佈的留言
-                if not (start_time <= published_dt < end_time):
-                    continue
 
-                all_comments.append({
-                    "video_id": video["video_id"],
-                    "title": video["title"],
-                    "channel": video["channel"],
-                    "author": snippet.get("authorDisplayName"),
-                    "text": snippet.get("textDisplay"),
-                    "likes": snippet.get("likeCount", 0),
-                    "published_at": published_at
-                })
+                # Only collect comments from yesterday up to execution time
+                if start_time <= published_dt <= end_time:
+                    all_comments.append({
+                        "video_id": video["video_id"],
+                        "title": video["title"],
+                        "channel": video["channel"],
+                        "author": snippet.get("authorDisplayName"),
+                        "text": snippet.get("textDisplay"),
+                        "likes": snippet.get("likeCount", 0),
+                        "published_at": published_at
+                    })
 
-                count += 1
-                if count >= 1000:
-                    break
+                    count += 1
+                    if count >= 1000:
+                        break
 
             next_page_token = res.get("nextPageToken")
             if not next_page_token:
                 break
 
-    context['ti'].xcom_push(key='youtube_comments', value=all_comments)
-    print(f" Collected {len(all_comments)} comments.")
+    # Example: store in XCom, or return it
+    context['ti'].xcom_push(key="collected_comments", value=all_comments)
+
 
 def bulk_insert_comments(**context):
-    rows = context['ti'].xcom_pull(key='youtube_comments')
+    rows = context['ti'].xcom_pull(key='collected_comments')
 
     hook = PostgresHook(postgres_conn_id='aws_pg')
     conn = hook.get_conn()
     cursor = conn.cursor()
 
     insert_sql = """
-        INSERT INTO raw_comments (video_id, title, channel, text, author, likes, published_at, collected_at)
+        INSERT INTO  raw_data.youtube_comments(video_id, title, channel, text, author, likes, published_at, collected_at)
         VALUES %s
     """
 
@@ -236,7 +195,7 @@ def bulk_insert_comments(**context):
     cursor.close()
     conn.close()
 
-    print(f"批次插入 {len(values)} 筆留言成功")
+    print(f"Successfully batch-inserted {len(values)} comments.")
 
 # DAG definition
 default_args = {
@@ -246,15 +205,14 @@ default_args = {
 with DAG(
     dag_id="youtube_comment_pipeline_us_stocks_daily",
     default_args=default_args,
-    schedule_interval="0 8 * * *",
+    schedule_interval="0 0 * * *",
     catchup=True,
     tags=["youtube", "daily", "us stocks"],
 ) as dag:
 
     t1 = PythonOperator(task_id="search_youtube", python_callable=search_youtube)
     t2 = PythonOperator(task_id="filter_with_openai", python_callable=filter_with_openai)
-    t3 = PythonOperator(task_id="select_top_videos", python_callable=select_top_videos)
-    t4 = PythonOperator(task_id="collect_comments", python_callable=collect_comments)
-    t5 = PythonOperator(task_id="load_to_postgres", python_callable=bulk_insert_comments)
+    t3 = PythonOperator(task_id="collect_comments", python_callable=collect_comments)
+    t4 = PythonOperator(task_id="load_to_postgres", python_callable=bulk_insert_comments)
 
-    t1 >> t2 >> t3 >> t4 >> t5
+    t1 >> t2 >> t3 >> t4 

@@ -11,3 +11,27 @@
 [2025-04-14T04:01:04.912+0000] {taskinstance.py:1138} INFO - Marking task as SUCCESS. dag_id=youtube_comment_pipeline_us_stocks_daily, task_id=select_top_videos, execution_date=20250413T000000, start_date=20250414T040104, end_date=20250414T040104
 [2025-04-14T04:01:04.947+0000] {local_task_job_runner.py:234} INFO - Task exited with return code 0
 [2025-04-14T04:01:04.962+0000] {taskinstance.py:3280} INFO - 1 downstream tasks scheduled from follow-on schedule check
+[2025-04-20T02:47:14.376+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: youtube_comment_pipeline_us_stocks_daily.select_top_videos scheduled__2025-04-13T00:00:00+00:00 [queued]>
+[2025-04-20T02:47:14.379+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: youtube_comment_pipeline_us_stocks_daily.select_top_videos scheduled__2025-04-13T00:00:00+00:00 [queued]>
+[2025-04-20T02:47:14.379+0000] {taskinstance.py:2170} INFO - Starting attempt 2 of 2
+[2025-04-20T02:47:14.383+0000] {taskinstance.py:2191} INFO - Executing <Task(PythonOperator): select_top_videos> on 2025-04-13 00:00:00+00:00
+[2025-04-20T02:47:14.385+0000] {standard_task_runner.py:60} INFO - Started process 3449 to run task
+[2025-04-20T02:47:14.387+0000] {standard_task_runner.py:87} INFO - Running: ['***', 'tasks', 'run', 'youtube_comment_pipeline_us_stocks_daily', 'select_top_videos', 'scheduled__2025-04-13T00:00:00+00:00', '--job-id', '693', '--raw', '--subdir', 'DAGS_FOLDER/youtube_comment_pipeline.py', '--cfg-path', '/tmp/tmpfufe0j8g']
+[2025-04-20T02:47:14.387+0000] {standard_task_runner.py:88} INFO - Job 693: Subtask select_top_videos
+[2025-04-20T02:47:14.406+0000] {task_command.py:423} INFO - Running <TaskInstance: youtube_comment_pipeline_us_stocks_daily.select_top_videos scheduled__2025-04-13T00:00:00+00:00 [running]> on host 7e480c288e12
+[2025-04-20T02:47:14.439+0000] {taskinstance.py:2480} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='youtube_comment_pipeline_us_stocks_daily' AIRFLOW_CTX_TASK_ID='select_top_videos' AIRFLOW_CTX_EXECUTION_DATE='2025-04-13T00:00:00+00:00' AIRFLOW_CTX_TRY_NUMBER='2' AIRFLOW_CTX_DAG_RUN_ID='scheduled__2025-04-13T00:00:00+00:00'
+[2025-04-20T02:47:14.565+0000] {taskinstance.py:2698} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.8/site-packages/airflow/models/taskinstance.py", line 433, in _execute_task
+    result = execute_callable(context=context, **execute_callable_kwargs)
+  File "/home/airflow/.local/lib/python3.8/site-packages/airflow/operators/python.py", line 199, in execute
+    return_value = self.execute_callable()
+  File "/home/airflow/.local/lib/python3.8/site-packages/airflow/operators/python.py", line 216, in execute_callable
+    return self.python_callable(*self.op_args, **self.op_kwargs)
+  File "/opt/airflow/dags/youtube_comment_pipeline.py", line 124, in select_top_videos
+    sorted_videos = sorted(res["items"], key=lambda v: int(v["statistics"].get("viewCount", 0)), reverse=True)
+KeyError: 'items'
+[2025-04-20T02:47:14.571+0000] {taskinstance.py:1138} INFO - Marking task as FAILED. dag_id=youtube_comment_pipeline_us_stocks_daily, task_id=select_top_videos, execution_date=20250413T000000, start_date=20250420T024714, end_date=20250420T024714
+[2025-04-20T02:47:14.576+0000] {standard_task_runner.py:107} ERROR - Failed to execute job 693 for task select_top_videos ('items'; 3449)
+[2025-04-20T02:47:14.611+0000] {local_task_job_runner.py:234} INFO - Task exited with return code 1
+[2025-04-20T02:47:14.624+0000] {taskinstance.py:3280} INFO - 0 downstream tasks scheduled from follow-on schedule check
