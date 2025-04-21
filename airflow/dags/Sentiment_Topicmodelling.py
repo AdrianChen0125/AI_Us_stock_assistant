@@ -94,19 +94,30 @@ def analyze_sentiment(text):
 
 def run_bertopic(**context):
     comments = context['ti'].xcom_pull(key='cleaned_comments')
-    
-    # 避免處理時間過長
+
+    # If number of comments exceeds 5000, randomly sample 5000
     if len(comments) > 5000:
-        print(f'comments {len(comments)} over 5000 sampling to 5000')
+        print(f'comments {len(comments)} over 5000, sampling to 5000')
         comments = random.sample(comments, 5000)
 
     texts = [c['text'] for c in comments]
     ids = [c['comment_id'] for c in comments]
 
-    topic_model = BERTopic(
-        nr_topics=20,
-        calculate_probabilities=False,
-        language="english")
+    # Decide whether to specify number of topics based on number of comments
+    if len(comments) < 1000:
+        # Let the model determine the number of topics automatically
+        topic_model = BERTopic(
+            calculate_probabilities=False,
+            language="english"
+        )
+    else:
+        # Manually set number of topics to 20
+        topic_model = BERTopic(
+            nr_topics=20,
+            calculate_probabilities=False,
+            language="english"
+        )
+
     topics, _ = topic_model.fit_transform(texts)
 
     enriched = []
@@ -121,6 +132,7 @@ def run_bertopic(**context):
         })
 
     context['ti'].xcom_push(key='bertopic_results', value=enriched)
+
 
 
 def save_processed_comments(**context):
@@ -149,8 +161,8 @@ def save_processed_comments(**context):
 
 with DAG(
     dag_id="weekly_comment_analysis_pipeline",
-    start_date=datetime(2025, 4, 6),
-    schedule_interval="0 5 * * 6",
+    start_date=datetime(2025, 4, 7),
+    schedule_interval="0 3 * * 1",
     catchup=True,
     max_active_runs=1,
     dagrun_timeout=timedelta(minutes=60),

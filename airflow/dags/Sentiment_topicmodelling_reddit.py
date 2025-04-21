@@ -137,8 +137,8 @@ def save_processed_comments(**context):
 
 with DAG(
     dag_id="weekly_reddit_comment_analysis",
-    start_date=datetime(2025, 4, 6),
-    schedule_interval="0 6 * * 6",  # 每週六早上 6 點
+    start_date=datetime(2025, 4, 7),
+    schedule_interval="0 2 * * 1",  # 每週1 早上 6 點
     catchup=True,
     max_active_runs=1,
     dagrun_timeout=timedelta(minutes=60),
