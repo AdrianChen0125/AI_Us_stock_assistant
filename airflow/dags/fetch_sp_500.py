@@ -1,5 +1,6 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.utils.dates import days_ago
 from airflow.operators.python import get_current_context
 from datetime import datetime
@@ -89,15 +90,15 @@ def insert_to_postgres(**kwargs):
     cursor = conn.cursor()
 
     insert_query = """
-        INSERT INTO sp500_snapshots (
+        INSERT INTO raw_data.sp500_snapshots (
             symbol, company, sector, sub_industry, market_cap, volume,
             previous_close, open, day_high, day_low, pe_ratio, forward_pe,
             dividend_yield, beta, high_52w, low_52w, snapshot_date
         ) VALUES %s
     """
-    execute_values(cur, insert_query, values)
+    execute_values(cursor , insert_query, values)
     conn.commit()
-    cur.close()
+    cursor.close()
     conn.close()
 
 def clean_old_snapshots():
@@ -106,7 +107,7 @@ def clean_old_snapshots():
     cursor = conn.cursor()
 
     delete_sql = """
-        DELETE FROM sp500_snapshots
+        DELETE FROM raw_data.sp500_snapshots
         WHERE snapshot_date < CURRENT_DATE - INTERVAL '60 days';
     """
 
