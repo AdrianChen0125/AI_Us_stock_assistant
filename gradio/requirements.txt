@@ -1,14 +1,18 @@
-gradio>=3.44.0
+gradio>=4.21.0
 requests
-# postgres 
+
+# PostgreSQL driver
 psycopg2-binary
-# openai
+
+# OpenAI & LLM
 openai
 langchain
 langchain-community
 langchain-openai
 wikipedia
-# 數據處理
+
+# Data processing & visualization
 pandas
 matplotlib
 plotly
+pillow
