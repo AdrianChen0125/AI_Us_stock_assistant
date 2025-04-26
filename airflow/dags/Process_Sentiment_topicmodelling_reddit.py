@@ -13,14 +13,14 @@ from bertopic import BERTopic
 from sentence_transformers import SentenceTransformer
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
-model_name = "nlptown/bert-base-multilingual-uncased-sentiment"
 model_base = os.getenv("MODEL_PATH", "/opt/airflow/models")
-sentiment_path = os.path.join(model_base, "nlptown/bert-base-multilingual-uncased-sentiment")
 embedding_model = SentenceTransformer("all-MiniLM-L6-v2", cache_folder=os.getenv("MODEL_PATH", "/opt/airflow/models"))
 
+tokenizer = None
+model = None
 
-def fetch_recent_comments(**context):
-    exec_date = context['execution_date'].date()
+def fetch_recent_comments(**kwargs):
+    exec_date = kwargs['execution_date'].date()
     start_date = exec_date - timedelta(days=7)
     end_date = exec_date
 
@@ -38,13 +38,11 @@ def fetch_recent_comments(**context):
     rows = cursor.fetchall()
     cursor.close()
     conn.close()
-    context['ti'].xcom_push(key='raw_comment_texts', value=[{"comment_id": r[0], "text": r[1]} for r in rows])
+    kwargs['ti'].xcom_push(key='raw_comment_texts', value=[{"comment_id": r[0], "text": r[1]} for r in rows])
 
-
-def clean_texts(**context):
+def clean_texts(**kwargs):
     stop_words = set(stopwords.words('english'))
-    raw = context['ti'].xcom_pull(key='raw_comment_texts')
-    nltk.download('punkt')
+    raw = kwargs['ti'].xcom_pull(key='raw_comment_texts')
 
     def clean(text):
         text = re.sub(r"http\S+", "", text)
@@ -69,14 +67,28 @@ def clean_texts(**context):
         except LangDetectException:
             continue
 
-    context['ti'].xcom_push(key='cleaned_comments', value=cleaned)
+    kwargs['ti'].xcom_push(key='cleaned_comments', value=cleaned)
     print(f"Filtered and cleaned {len(cleaned)} English comments.")
-
 
 def analyze_sentiment(text):
     global tokenizer, model
     if tokenizer is None or model is None:
+        base_path = os.getenv("MODEL_PATH", "/opt/airflow/models")
+        sentiment_path = os.path.join(base_path, "models--nlptown--bert-base-multilingual-uncased-sentiment")
+        
+        snapshots_path = os.path.join(sentiment_path, "snapshots")
+        snapshot_folders = os.listdir(snapshots_path)
 
+        if len(snapshot_folders) != 1:
+            raise ValueError(f"Found multiple snapshots: {snapshot_folders}")
+        
+        sentiment_path = os.path.join(snapshots_path, snapshot_folders[0])
+
+
+        tokenizer = AutoTokenizer.from_pretrained(sentiment_path)
+        model = AutoModelForSequenceClassification.from_pretrained(sentiment_path)
+
+                
         tokenizer = AutoTokenizer.from_pretrained(sentiment_path)
         model = AutoModelForSequenceClassification.from_pretrained(sentiment_path)
 
@@ -93,15 +105,14 @@ def analyze_sentiment(text):
         else:
             return 'positive'
 
-
-def run_bertopic(**context):
-    comments = context['ti'].xcom_pull(key='cleaned_comments')
+def run_bertopic(**kwargs):
+    comments = kwargs['ti'].xcom_pull(key='cleaned_comments')
     if len(comments) > 5000:
         comments = random.sample(comments, 5000)
 
     texts = [c['text'] for c in comments]
     ids = [c['comment_id'] for c in comments]
-
+    
     topic_model = BERTopic(
         nr_topics=20,
         embedding_model = embedding_model,
@@ -121,11 +132,10 @@ def run_bertopic(**context):
             "sentiment": sentiment
         })
 
-    context['ti'].xcom_push(key='bertopic_results', value=enriched)
+    kwargs['ti'].xcom_push(key='bertopic_results', value=enriched)
 
-
-def save_processed_comments(**context):
-    rows = context['ti'].xcom_pull(key='bertopic_results')
+def save_processed_comments(**kwargs):
+    rows = kwargs['ti'].xcom_pull(key='bertopic_results')
     hook = PostgresHook(postgres_conn_id='aws_pg')
     conn = hook.get_conn()
     cursor = conn.cursor()
@@ -145,7 +155,7 @@ def save_processed_comments(**context):
             row.get("sentiment", "neutral"),
             row["topic_tags"],
             row["keywords"],
-            context['execution_date'].date()
+            kwargs['execution_date'].date()
         ) for row in rows
     ]
     execute_values(cursor, insert_sql, values)
@@ -153,20 +163,40 @@ def save_processed_comments(**context):
     cursor.close()
     conn.close()
 
+default_args = {
+    "owner": "DE_Adrian",
+    "retries": 1,
+    "retry_delay": timedelta(minutes=3),
+}
 
 with DAG(
     dag_id = "Process_Sentiment_topicmodelling_reddit",
+    default_args = default_args,
     start_date = datetime(2025, 4, 24),
     schedule_interval = "0 5 * * 6",  
     catchup = False,
     max_active_runs = 1,
     dagrun_timeout = timedelta(minutes=60),
-    tags = ["nlp", "reddit", "topic-analysis"]
+    tags = ["processed", "reddit", "sentiment", "topic"]
+
 ) as dag:
 
-    t1 = PythonOperator(task_id="fetch_recent_comments", python_callable=fetch_recent_comments)
-    t2 = PythonOperator(task_id="clean_texts", python_callable=clean_texts)
-    t3 = PythonOperator(task_id="run_bertopic", python_callable=run_bertopic)
-    t4 = PythonOperator(task_id="save_processed_comments", python_callable=save_processed_comments)
+    t1 = PythonOperator(
+        task_id="fetch_recent_comments",
+        python_callable=fetch_recent_comments
+        )
+    
+    t2 = PythonOperator(
+        task_id="clean_texts",
+        python_callable=clean_texts
+        )
+    t3 = PythonOperator(
+        task_id = "run_bertopic",
+        python_callable = run_bertopic
+        )
+    t4 = PythonOperator(
+        task_id = "save_processed_comments",
+        python_callable = save_processed_comments
+        )
 
     t1 >> t2 >> t3 >> t4

@@ -3,7 +3,7 @@ from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.utils.dates import days_ago
 from airflow.operators.python import get_current_context
-from datetime import datetime
+from datetime import datetime, timedelta
 import pandas as pd
 import yfinance as yf
 import time
@@ -11,23 +11,10 @@ import psycopg2
 from psycopg2.extras import execute_values
 import json
 
-default_args = {
-    'owner': 'airflow',
-    'start_date': '2025-04-01',
-}
-
-dag = DAG(
-    dag_id = 'fetch_sp500',
-    default_args = default_args,
-    schedule_interval = '@daily',
-    catchup = False,
-    tags = ['stock','sp500'],
-)
-
 
 def fetch_sp500_data(**kwargs):
-    context = get_current_context()
-    snapshot_date = context['execution_date']
+    kwargs = get_current_context()
+    snapshot_date = kwargs['execution_date']
 
     url = 'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies'
     df = pd.read_html(url)[0][['Symbol', 'Security']]
@@ -129,24 +116,39 @@ def clean_old_snapshots():
 
     print(f"[INFO] Deleted {deleted} old rows from sp500_snapshots.")
 
-task_fetch = PythonOperator(
-    task_id = 'fetch_sp500_data',
-    python_callable = fetch_sp500_data,
-    provide_context = True,
-    dag = dag,
-)
 
-task_insert = PythonOperator(
-    task_id ='insert_to_postgres',
-    python_callable = insert_to_postgres,
-    provide_context = True,
-    dag = dag,
-)
 
-task_clean_old_data = PythonOperator(
-    task_id='clean_old_snapshots',
-    python_callable=clean_old_snapshots,
-    dag=dag,
-)
+default_args = {
+    'owner': 'DE_Adrian',
+    "retries": 1,
+    "retry_delay": timedelta(minutes=3)
+    
+}
 
-task_fetch >> task_insert >> task_clean_old_data 
+with DAG(
+    dag_id = 'fetch_sp500',
+    default_args = default_args,
+    start_date = datetime(2025,4,1),
+    schedule_interval = '@daily',
+    catchup = False,
+    tags = ['raw','sp500'],
+) as dag:
+     
+    task_fetch = PythonOperator(
+        task_id = 'fetch_sp500_data',
+        python_callable = fetch_sp500_data
+
+    )
+
+    task_insert = PythonOperator(
+        task_id ='insert_to_postgres',
+        python_callable = insert_to_postgres
+
+    )
+
+    task_clean_old_data = PythonOperator(
+        task_id = 'clean_old_snapshots',
+        python_callable = clean_old_snapshots
+    )
+
+    task_fetch >> task_insert >> task_clean_old_data 

@@ -17,9 +17,9 @@ FRED_SERIES = {
     "Consumer Sentiment": "UMCSENT"
 }
 
-def fetch_fred_indicators(**context):
+def fetch_fred_indicators(**kwargs):
     
-    execution_date = context['execution_date'].date() 
+    execution_date = kwargs['execution_date'].date() 
     start_date = execution_date - timedelta(days=30)
     end_date = execution_date
     results = []
@@ -45,10 +45,10 @@ def fetch_fred_indicators(**context):
                 "date": obs["date"]
             })
 
-    context["ti"].xcom_push(key="fred_data", value=results)
+    kwargs["ti"].xcom_push(key="fred_data", value=results)
 
-def store_fred_to_postgres(**context):
-    rows = context["ti"].xcom_pull(key="fred_data")
+def store_fred_to_postgres(**kwargs):
+    rows = kwargs["ti"].xcom_pull(key="fred_data")
     if not rows:
         print("[INFO] No data to insert.")
         return
@@ -87,31 +87,29 @@ def store_fred_to_postgres(**context):
 
 
 default_args = {
-    "owner": "airflow",
+    "owner": "DE_Adrian",
     "retries": 1,
     "retry_delay": timedelta(minutes=3),
 }
 
-dag = DAG(
+with DAG(
     dag_id = "fetch_economic_index",
     default_args = default_args,
     start_date = datetime (2025, 4, 25),
-    schedule_interval = "0 5 * * 6",  # 每週一次
+    schedule_interval = "0 5 * * 6",  
     catchup = True,
-)
+    tags = ["raw", "economic"]
+    
+) as dag: 
+    
+    fetch_data = PythonOperator(
+        task_id = "fetch_fred_data",
+        python_callable = fetch_fred_indicators
+        )
+    
+    store_data = PythonOperator(
+        task_id = "store_fred_data",
+        python_callable = store_fred_to_postgres
+        )
 
-fetch_data = PythonOperator(
-    task_id = "fetch_fred_data",
-    python_callable = fetch_fred_indicators,
-    provide_context = True,
-    dag = dag,
-)
-
-store_data = PythonOperator(
-    task_id = "store_fred_data",
-    python_callable = store_fred_to_postgres,
-    provide_context = True,
-    dag = dag,
-)
-
-fetch_data >> store_data
+    fetch_data >> store_data

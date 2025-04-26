@@ -18,7 +18,7 @@ def get_reddit():
         user_agent = os.getenv("REDDIT_AGENT", "airflow_reddit_agent")
     )
 
-def get_top10_per_sector(**context):
+def get_top10_per_sector(**kwargs):
 
     hook = PostgresHook(postgres_conn_id='aws_pg')
     conn = hook.get_conn()
@@ -47,17 +47,17 @@ def get_top10_per_sector(**context):
 
     top_stocks = [{'symbol': r[0], 'company': r[1], 'sector': r[2]} for r in rows]
     
-    ti = context['ti']
+    ti = kwargs['ti']
     ti.xcom_push(key='top10_stocks', value=json.dumps(top_stocks))
 
 
-def get_reddit_comments(**context):
+def get_reddit_comments(**kwargs):
     
-    execution_date = context["execution_date"]
+    execution_date = kwargs["execution_date"]
     cutoff_start = execution_date - timedelta(days=6)
     cutoff_end = execution_date + timedelta(days=1)
 
-    symbols = context["ti"].xcom_pull(task_ids = 'get_top10_per_sector', key = "top10_stocks")
+    symbols = kwargs["ti"].xcom_pull(task_ids = 'get_top10_per_sector', key = "top10_stocks")
     top_stocks = json.loads(symbols)
 
     reddit = get_reddit()
@@ -118,13 +118,13 @@ def get_reddit_comments(**context):
 
     print(f"[INFO] Collected {len(comments)} comments across {len(symbols)} symbols.")
     
-    ti = context['ti']
+    ti = kwargs['ti']
     ti.xcom_push(key="reddit_comments", value=comments)
 
 
-def store_comments_to_postgres(**context):
-    comments = context["ti"].xcom_pull(task_ids="get_reddit_comments", key="reddit_comments")
-    execution_date = context["execution_date"].date()
+def store_comments_to_postgres(**kwargs):
+    comments = kwargs["ti"].xcom_pull(task_ids="get_reddit_comments", key="reddit_comments")
+    execution_date = kwargs["execution_date"].date()
 
     # Setup DB connection
     hook = PostgresHook(postgres_conn_id="aws_pg")
@@ -190,39 +190,33 @@ def store_comments_to_postgres(**context):
     print(f"[INFO] Successfully inserted {len(values)} comments.")
 
 default_args = {
-    "owner": "airflow",
+    "owner": "DE_Adrian",
     "retries": 1,
     "retry_delay": timedelta(minutes=5),
 }
 
-dag = DAG(
+with DAG(
     dag_id = "fetch_reddit_comment_sp500_top10_by_sector",
     default_args = default_args,
     start_date = datetime(2025, 4, 14),
     schedule_interval = "@daily",
     catchup =False,
-)
-
-# === Task Definitions ===
-t1 = PythonOperator(
-    task_id="get_top10_per_sector",
-    python_callable=get_top10_per_sector,
-    provide_context=True,
-    dag=dag,
-)
-
-t2 = PythonOperator(
+    tags = ["raw", "reddit","sp500"]
+) as dag:
+    
+    t1 = PythonOperator(
+        task_id="get_top10_per_sector",
+        python_callable=get_top10_per_sector
+        )
+    
+    t2 = PythonOperator(
     task_id="get_reddit_comments",
-    python_callable=get_reddit_comments,
-    provide_context=True,
-    dag=dag,
-)
-
-t3 = PythonOperator(
+    python_callable=get_reddit_comments
+    )
+    
+    t3 = PythonOperator(
     task_id = "store_comments_to_postgres",
-    python_callable = store_comments_to_postgres,
-    provide_context = True,
-    dag = dag,
-)
+    python_callable = store_comments_to_postgres
+    )
 
-t1 >> t2 >> t3
+    t1 >> t2 >> t3

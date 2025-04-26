@@ -2,7 +2,6 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from psycopg2.extras import execute_values
-
 from datetime import datetime, timedelta, timezone
 import praw
 import os
@@ -12,7 +11,7 @@ REDDIT_CLIENT_ID = os.getenv("REDDIT_CLIENT_ID")
 REDDIT_SECRET = os.getenv("REDDIT_SECRET")
 REDDIT_AGENT = os.getenv("REDDIT_AGENT")
 
-def get_reddit_posts(**context):
+def get_reddit_posts(**kwargs):
     """Fetch Reddit posts related to US stock market created on execution date"""
 
     reddit = praw.Reddit(
@@ -21,8 +20,8 @@ def get_reddit_posts(**context):
         user_agent=REDDIT_AGENT
     )
 
-    # Get execution date from Airflow context
-    execution_date = context["execution_date"]
+    # Get execution date from Airflow kwargs
+    execution_date = kwargs["execution_date"]
     start_time = execution_date - timedelta(days=2)
     end_time = execution_date + timedelta(days=1)
 
@@ -52,13 +51,10 @@ def get_reddit_posts(**context):
         })
 
     print(f"[INFO] Collected {len(posts)} posts created on {execution_date.date()}")
-    context['ti'].xcom_push(key='reddit_posts', value=posts)
+    kwargs['ti'].xcom_push(key='reddit_posts', value=posts)
 
 
-def extract_reddit_comments(**context):
-    from datetime import datetime, timezone, timedelta
-    import os
-    import praw
+def extract_reddit_comments(**kwargs):
 
     reddit = praw.Reddit(
         client_id=os.getenv("REDDIT_CLIENT_ID"),
@@ -66,13 +62,13 @@ def extract_reddit_comments(**context):
         user_agent=os.getenv("REDDIT_AGENT")
     )
 
-    posts = context['ti'].xcom_pull(task_ids='get_reddit_posts', key='reddit_posts')
+    posts = kwargs['ti'].xcom_pull(task_ids='get_reddit_posts', key='reddit_posts')
     if not posts:
         print("[INFO] No posts received from previous task.")
         return
 
     # Define time window for filtering comments
-    execution_date = context['execution_date']
+    execution_date = kwargs['execution_date']
     start_time = execution_date
     end_time = execution_date + timedelta(days=1)
 
@@ -112,15 +108,15 @@ def extract_reddit_comments(**context):
             break
 
     print(f"[INFO] Collected {len(comments)} top-level comments in total.")
-    context['ti'].xcom_push(key='reddit_comments', value=comments)
+    kwargs['ti'].xcom_push(key='reddit_comments', value=comments)
 
 
 
 
-def store_to_postgres(**context):
+def store_to_postgres(**kwargs):
     """Insert Reddit comments into PostgreSQL"""
-    rows = context['ti'].xcom_pull(task_ids='extract_reddit_comments', key='reddit_comments')
-    execution_date = context["execution_date"].date()
+    rows = kwargs['ti'].xcom_pull(task_ids='extract_reddit_comments', key='reddit_comments')
+    execution_date = kwargs["execution_date"].date()
     if not rows:
         print("[INFO] No comments to insert.")
         return
@@ -158,40 +154,37 @@ def store_to_postgres(**context):
 
 
 default_args = {
-    "owner": "airflow",
+    "owner": "DE_Adrian",
     "retries": 1,
     "retry_delay": timedelta(minutes=5),
 }
 
-dag = DAG(
-    dag_id="fetch_reddit_comment",
-    default_args=default_args,
-    start_date=datetime(2025, 4, 24),
-    schedule_interval="@daily",
-    catchup=True,
-)
+with DAG(
+    dag_id = "fetch_reddit_comment",
+    default_args = default_args,
+    start_date = datetime(2025, 4, 24),
+    schedule_interval = "@daily",
+    catchup = True,
+    tags = ["raw", "reddit", "us_stock"]
+    
+) as dag:
 
-# DAG task definitions
-get_posts = PythonOperator(
-    task_id="get_reddit_posts",
-    python_callable=get_reddit_posts,
-    provide_context=True,
-    dag=dag,
-)
+    get_posts = PythonOperator(
+        task_id="get_reddit_posts",
+        python_callable=get_reddit_posts
 
-extract_comments = PythonOperator(
-    task_id="extract_reddit_comments",
-    python_callable=extract_reddit_comments,
-    provide_context=True,
-    dag=dag,
-)
+    )
 
-save_to_pg = PythonOperator(
-    task_id="store_to_postgres",
-    python_callable=store_to_postgres,
-    provide_context=True,
-    dag=dag,
-)
+    extract_comments = PythonOperator(
+        task_id="extract_reddit_comments",
+        python_callable=extract_reddit_comments
+    )
 
-# Task dependencies
-get_posts >> extract_comments >> save_to_pg
+    save_to_pg = PythonOperator(
+        task_id="store_to_postgres",
+        python_callable=store_to_postgres,
+
+    )
+
+
+    get_posts >> extract_comments >> save_to_pg

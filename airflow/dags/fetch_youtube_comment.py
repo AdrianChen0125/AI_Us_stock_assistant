@@ -12,9 +12,9 @@ YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 
-def search_youtube(**context):    
+def search_youtube(**kwargs):    
     query = "us stock market news"
-    execution_date = context["execution_date"]
+    execution_date = kwargs["execution_date"]
 
     published_after = execution_date - timedelta(days=90)
     published_before = execution_date
@@ -41,7 +41,7 @@ def search_youtube(**context):
             filtered_video_ids.append(video_id)
 
     if not filtered_video_ids:
-        context['ti'].xcom_push(key='raw_videos', value=[])
+        kwargs['ti'].xcom_push(key='raw_videos', value=[])
         return
 
     # 🔍 Fetch details
@@ -70,20 +70,20 @@ def search_youtube(**context):
     top_videos = sorted(videos, key=lambda x: x["views"], reverse=True)
 
     # Push to XCom
-    context['ti'].xcom_push(key='top_videos', value=top_videos)
+    kwargs['ti'].xcom_push(key='top_videos', value=top_videos)
 
-def filter_with_openai(**context):
+def filter_with_openai(**kwargs):
     from openai import OpenAI
 
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     
     # Pull XCom value using correct key
-    videos = context['ti'].xcom_pull(key='top_videos', task_ids='search_youtube')
+    videos = kwargs['ti'].xcom_pull(key='top_videos', task_ids='search_youtube')
     filtered = []
 
     if not videos:
         print(" No videos found to filter.")
-        context['ti'].xcom_push(key='filtered_videos', value=[])
+        kwargs['ti'].xcom_push(key='filtered_videos', value=[])
         return
 
     for vid in videos:
@@ -101,13 +101,13 @@ def filter_with_openai(**context):
         if "yes" in answer:
             filtered.append(vid)
 
-    context['ti'].xcom_push(key='filtered_videos', value=filtered)
+    kwargs['ti'].xcom_push(key='filtered_videos', value=filtered)
 
-def collect_comments(**context):
-    top_videos = context['ti'].xcom_pull(key='filtered_videos')
+def collect_comments(**kwargs):
+    top_videos = kwargs['ti'].xcom_pull(key='filtered_videos')
     all_comments = []
 
-    execution_date = context['execution_date']  
+    execution_date = kwargs['execution_date']  
     start_time = execution_date 
     end_time = execution_date + timedelta(days=1)
 
@@ -162,15 +162,14 @@ def collect_comments(**context):
                 break
 
     # Example: store in XCom, or return it
-    context['ti'].xcom_push(key="collected_comments", value=all_comments)
+    kwargs['ti'].xcom_push(key="collected_comments", value=all_comments)
 
-
-def bulk_insert_comments(**context):
-    rows = context['ti'].xcom_pull(key='collected_comments')
+def bulk_insert_comments(**kwargs):
+    rows = kwargs['ti'].xcom_pull(key='collected_comments')
     hook = PostgresHook(postgres_conn_id='aws_pg')
     conn = hook.get_conn()
     cursor = conn.cursor()
-    execution_date = context['execution_date'].date()
+    execution_date = kwargs['execution_date'].date()
 
     insert_sql = """
         INSERT INTO  raw_data.youtube_comments(
@@ -210,22 +209,39 @@ def bulk_insert_comments(**context):
 
     print(f"Successfully batch-inserted {len(values)} comments.")
 
-# DAG definition
 default_args = {
-    "start_date": datetime(2025, 4, 24),
+    "owner": "DE_Adrian",
+    "retries": 1,
+    "retry_delay": timedelta(minutes=3)
 }
 
 with DAG(
-    dag_id="fetch_youtube_comment",
-    default_args=default_args,
-    schedule_interval="0 0 * * *",
-    catchup=True,
-    tags=["youtube", "daily", "us stocks"],
+    dag_id = "fetch_youtube_comment",
+    default_args = default_args,
+    start_date = datetime(2025, 4, 24),
+    schedule_interval = "0 0 * * *",
+    catchup = True,
+    tags=["raw", "youtube", "us stocks"],
 ) as dag:
 
-    t1 = PythonOperator(task_id="search_youtube", python_callable=search_youtube)
-    t2 = PythonOperator(task_id="filter_with_openai", python_callable=filter_with_openai)
-    t3 = PythonOperator(task_id="collect_comments", python_callable=collect_comments)
-    t4 = PythonOperator(task_id="load_to_postgres", python_callable=bulk_insert_comments)
+    t1 = PythonOperator(
+        task_id = "search_youtube", 
+        python_callable = search_youtube
+        )
+    
+    t2 = PythonOperator(
+        task_id = "filter_with_openai", 
+        python_callable = filter_with_openai
+        )
+    
+    t3 = PythonOperator(
+        task_id = "collect_comments", 
+        python_callable = collect_comments
+        )
+    
+    t4 = PythonOperator(
+        task_id="load_to_postgres", 
+        python_callable=bulk_insert_comments
+        )
 
     t1 >> t2 >> t3 >> t4 

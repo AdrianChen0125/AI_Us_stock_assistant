@@ -12,8 +12,15 @@ CREATE SCHEMA IF NOT EXISTS rag_docs;
 CREATE TYPE sentiment_type AS ENUM ('positive', 'neutral', 'negative');
 
 -- raw_data Schema Tables 
+CREATE TABLE IF NOT EXISTS raw_data.market_snapshots (
+    id SERIAL PRIMARY KEY,
+    market VARCHAR(50) NOT NULL,           -- Market name, e.g., NASDAQ, SP500, BITCOIN
+    snapshot_time DATE NOT NULL,           -- Snapshot date
+    price NUMERIC,                         -- Market closing price
+    UNIQUE (market, snapshot_time)
+);
 
-CREATE TABLE sp500_snapshots (
+CREATE TABLE raw_data.sp500_snapshots (
     id SERIAL PRIMARY KEY,
     symbol TEXT NOT NULL,
     company TEXT,
@@ -34,7 +41,6 @@ CREATE TABLE sp500_snapshots (
     snapshot_date DATE NOT NULL,
     UNIQUE (symbol, snapshot_date) 
 );
-
 CREATE TABLE IF NOT EXISTS raw_data.reddit_comments_sp500
 (
     comment_id TEXT PRIMARY KEY,
@@ -95,7 +101,7 @@ CREATE TABLE IF NOT EXISTS raw_data.user_profiles (
 -- processed_data Schema Tables 
 CREATE TABLE processed_data.youtube_comments (
     processed_id SERIAL PRIMARY KEY,
-    comment_id INTEGER REFERENCES raw_data.youtube_comments(comment_id),
+    comment_id TEXT REFERENCES raw_data.youtube_comments(comment_id),
     sentiment sentiment_type,
     topic_tags TEXT[], 
     keywords TEXT[],    
