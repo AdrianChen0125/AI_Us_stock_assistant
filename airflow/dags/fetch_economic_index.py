@@ -19,10 +19,11 @@ FRED_SERIES = {
 
 def fetch_fred_indicators(**context):
     
-    execution_date = context['execution_date'].date()  # 抓 Airflow 傳進來的執行日
+    execution_date = context['execution_date'].date() 
     start_date = execution_date - timedelta(days=30)
     end_date = execution_date
     results = []
+
     for name, sid in FRED_SERIES.items():
         res = requests.get(FRED_API_URL, params={
             "series_id": sid,
@@ -52,12 +53,17 @@ def store_fred_to_postgres(**context):
         print("[INFO] No data to insert.")
         return
 
-    hook = PostgresHook(postgres_conn_id="aws_pg")  # 改成你的連線 ID
+    hook = PostgresHook(postgres_conn_id="aws_pg")  
     conn = hook.get_conn()
     cursor = conn.cursor()
 
     insert_sql = """
-    INSERT INTO raw_data.economic_indicators (indicator, series_id, value, date, fetched_at)
+    INSERT INTO raw_data.economic_indicators (
+        indicator, 
+        series_id, 
+        value, 
+        date, 
+        fetched_at)
     VALUES %s
     ON CONFLICT (series_id, date) DO NOTHING;
     """
@@ -87,25 +93,25 @@ default_args = {
 }
 
 dag = DAG(
-    dag_id="fetch_economic_index",
-    default_args=default_args,
-    start_date=datetime(2025, 4, 24),
-    schedule_interval="@weekly",  # 每週一次
-    catchup=True,
+    dag_id = "fetch_economic_index",
+    default_args = default_args,
+    start_date = datetime (2025, 4, 25),
+    schedule_interval = "0 5 * * 6",  # 每週一次
+    catchup = True,
 )
 
 fetch_data = PythonOperator(
-    task_id="fetch_fred_data",
-    python_callable=fetch_fred_indicators,
-    provide_context=True,
-    dag=dag,
+    task_id = "fetch_fred_data",
+    python_callable = fetch_fred_indicators,
+    provide_context = True,
+    dag = dag,
 )
 
 store_data = PythonOperator(
-    task_id="store_fred_data",
-    python_callable=store_fred_to_postgres,
-    provide_context=True,
-    dag=dag,
+    task_id = "store_fred_data",
+    python_callable = store_fred_to_postgres,
+    provide_context = True,
+    dag = dag,
 )
 
 fetch_data >> store_data

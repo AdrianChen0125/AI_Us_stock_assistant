@@ -23,11 +23,27 @@ USER airflow
 COPY requirements.txt .
 
 RUN pip install --upgrade pip && \
-    pip install numpy && \
-    pip install hdbscan && \
-    pip install nltk && \
-    python -m nltk.downloader punkt stopwords punkt_tab &&\
+    pip install numpy hdbscan nltk && \
+    python -m nltk.downloader punkt stopwords &&\
     pip install --no-cache-dir -r requirements.txt
+
+RUN mkdir -p /opt/airflow/models && chmod -R 777 /opt/airflow/models
+
+RUN python3 -m nltk.downloader punkt
+
+ENV MODEL_PATH=/opt/airflow/models
+# sentiment model 
+
+RUN python3 -c "\
+from transformers import AutoTokenizer, AutoModelForSequenceClassification; \
+AutoTokenizer.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment', cache_dir='$MODEL_PATH'); \
+AutoModelForSequenceClassification.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment', cache_dir='$MODEL_PATH')"
+
+# berttopic model
+RUN python3 -c "\
+from sentence_transformers import SentenceTransformer; \
+SentenceTransformer('all-MiniLM-L6-v2', cache_folder='$MODEL_PATH')"
+
 
 # Copy DAGs
 COPY ./dags /opt/airflow/dags

@@ -35,6 +35,20 @@ CREATE TABLE sp500_snapshots (
     UNIQUE (symbol, snapshot_date) 
 );
 
+CREATE TABLE IF NOT EXISTS raw_data.reddit_comments_sp500
+(
+    comment_id TEXT PRIMARY KEY,
+    symbol TEXT,  
+    company TEXT,  
+    post_id TEXT,  
+	post_title TEXT,
+    subreddit TEXT ,
+    author TEXT ,
+    comment_text TEXT ,
+    score integer,
+    created_utc timestamp,
+    fetched_at timestamp,
+)
 
 CREATE TABLE raw_data.youtube_comments (
     comment_id SERIAL PRIMARY KEY, 
@@ -49,7 +63,7 @@ CREATE TABLE raw_data.youtube_comments (
 );
 
 CREATE TABLE raw_data.reddit_comments (
-    post_id TEXT PRIMARY KEY,  -- Reddit 原始 ID 如 "t1_xyz"
+    comment_id TEXT PRIMARY KEY,  
     subreddit TEXT,
     author TEXT,
     comment_text TEXT,
@@ -58,8 +72,8 @@ CREATE TABLE raw_data.reddit_comments (
 );
 
 CREATE TABLE IF NOT EXISTS raw_data.economic_indicators (
-    indicator     TEXT,        -- 指標名稱，如 CPI、GDP
-    series_id     TEXT,        -- FRED series_id
+    indicator     TEXT,        
+    series_id     TEXT,        
     value         FLOAT,
     date          DATE,
     fetched_at    TIMESTAMP DEFAULT NOW(),
@@ -90,11 +104,24 @@ CREATE TABLE processed_data.youtube_comments (
 
 CREATE TABLE processed_data.reddit_comments (
     processed_id SERIAL PRIMARY KEY,
-    post_id TEXT REFERENCES raw_data.reddit_comments(post_id),
+    comment_id TEXT REFERENCES raw_data.reddit_comments(comment_id),
     sentiment sentiment_type,
     topic_tags TEXT[]
     keywords TEXT[]
     processed_at TIMESTAMP 
+);
+
+CREATE TABLE processed_data.reddit_comments_sp500 (
+    symbol TEXT NOT NULL,
+    post_id TEXT NOT NULL,
+    post_title TEXT,
+    comment_id TEXT PRIMARY KEY, 
+    subreddit TEXT,
+    author TEXT,
+    comment_text TEXT,
+    score INTEGER,
+    created_utc TIMESTAMP,       
+    fetched_at TIMESTAMP 
 );
 
 CREATE TABLE IF NOT EXISTS processed_data.reddit_topic (

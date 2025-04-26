@@ -12,25 +12,8 @@ REDDIT_CLIENT_ID = os.getenv("REDDIT_CLIENT_ID")
 REDDIT_SECRET = os.getenv("REDDIT_SECRET")
 REDDIT_AGENT = os.getenv("REDDIT_AGENT")
 
-default_args = {
-    "owner": "airflow",
-    "retries": 1,
-    "retry_delay": timedelta(minutes=5),
-}
-
-dag = DAG(
-    dag_id="fetch_reddit_comment",
-    default_args=default_args,
-    start_date=datetime(2025, 4, 24),
-    schedule_interval="@daily",
-    catchup=True,
-)
-
-
-
 def get_reddit_posts(**context):
     """Fetch Reddit posts related to US stock market created on execution date"""
-    from datetime import timezone
 
     reddit = praw.Reddit(
         client_id=REDDIT_CLIENT_ID,
@@ -114,7 +97,7 @@ def extract_reddit_comments(**context):
                 continue
 
             comments.append({
-                "post_id": comment.fullname,
+                "comment_id": comment.id,
                 "subreddit": str(submission.subreddit),
                 "text": comment.body,
                 "created_utc": created_dt.isoformat(),
@@ -137,7 +120,7 @@ def extract_reddit_comments(**context):
 def store_to_postgres(**context):
     """Insert Reddit comments into PostgreSQL"""
     rows = context['ti'].xcom_pull(task_ids='extract_reddit_comments', key='reddit_comments')
-
+    execution_date = context["execution_date"].date()
     if not rows:
         print("[INFO] No comments to insert.")
         return
@@ -148,7 +131,7 @@ def store_to_postgres(**context):
 
     insert_sql = """
         INSERT INTO raw_data.reddit_comments (
-            post_id, subreddit, author, comment_text, created_utc, fetched_at
+            comment_id, subreddit, author, comment_text, created_utc, fetched_at
         )
         VALUES %s
         ON CONFLICT (post_id) DO NOTHING;
@@ -156,12 +139,12 @@ def store_to_postgres(**context):
 
     values = [
         (
-            row["post_id"],
+            row["comment_id"],
             row["subreddit"],
             row["author"],
             row["text"],
             row["created_utc"],
-            datetime.utcnow()
+            execution_date
         )
         for row in rows
     ]
@@ -173,6 +156,20 @@ def store_to_postgres(**context):
 
     print(f"[INFO] Successfully batch-inserted {len(values)} comments.")
 
+
+default_args = {
+    "owner": "airflow",
+    "retries": 1,
+    "retry_delay": timedelta(minutes=5),
+}
+
+dag = DAG(
+    dag_id="fetch_reddit_comment",
+    default_args=default_args,
+    start_date=datetime(2025, 4, 24),
+    schedule_interval="@daily",
+    catchup=True,
+)
 
 # DAG task definitions
 get_posts = PythonOperator(

@@ -7,13 +7,16 @@ import re, os, random
 from langdetect import detect, LangDetectException
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
+import nltk
 import torch
 from bertopic import BERTopic
+from sentence_transformers import SentenceTransformer
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 model_name = "nlptown/bert-base-multilingual-uncased-sentiment"
-tokenizer = None
-model = None
+model_base = os.getenv("MODEL_PATH", "/opt/airflow/models")
+sentiment_path = os.path.join(model_base, "nlptown/bert-base-multilingual-uncased-sentiment")
+embedding_model = SentenceTransformer("all-MiniLM-L6-v2", cache_folder=os.getenv("MODEL_PATH", "/opt/airflow/models"))
 
 
 def fetch_recent_comments(**context):
@@ -25,9 +28,13 @@ def fetch_recent_comments(**context):
     conn = hook.get_conn()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT post_id,comment_text FROM raw_data.reddit_comments
+        SELECT 
+            comment_id,
+            comment_text 
+        FROM raw_data.reddit_comments
         WHERE DATE(created_utc) BETWEEN %s AND %s
     """, (start_date, end_date))
+
     rows = cursor.fetchall()
     cursor.close()
     conn.close()
@@ -37,12 +44,13 @@ def fetch_recent_comments(**context):
 def clean_texts(**context):
     stop_words = set(stopwords.words('english'))
     raw = context['ti'].xcom_pull(key='raw_comment_texts')
+    nltk.download('punkt')
 
     def clean(text):
         text = re.sub(r"http\S+", "", text)
         text = re.sub(r"[^\w\s]", "", text)
         text = text.lower().strip()
-        tokens = word_tokenize(text)
+        tokens = word_tokenize(text,language='english')
         filtered_tokens = [w for w in tokens if w not in stop_words]
         return " ".join(filtered_tokens) if len(filtered_tokens) > 3 else None
 
@@ -68,9 +76,12 @@ def clean_texts(**context):
 def analyze_sentiment(text):
     global tokenizer, model
     if tokenizer is None or model is None:
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
-        model = AutoModelForSequenceClassification.from_pretrained(model_name)
+
+        tokenizer = AutoTokenizer.from_pretrained(sentiment_path)
+        model = AutoModelForSequenceClassification.from_pretrained(sentiment_path)
+
     inputs = tokenizer(text, return_tensors="pt", truncation=True)
+
     with torch.no_grad():
         outputs = model(**inputs)
         scores = torch.nn.functional.softmax(outputs.logits, dim=1)
@@ -93,8 +104,10 @@ def run_bertopic(**context):
 
     topic_model = BERTopic(
         nr_topics=20,
+        embedding_model = embedding_model,
         calculate_probabilities=False,
         language="english")
+
     topics, _ = topic_model.fit_transform(texts)
 
     enriched = []
@@ -117,7 +130,13 @@ def save_processed_comments(**context):
     conn = hook.get_conn()
     cursor = conn.cursor()
     insert_sql = """
-        INSERT INTO processed_data.reddit_comments (post_id,sentiment, topic_tags, keywords, processed_at)
+
+        INSERT INTO processed_data.reddit_comments (
+        comment_id,
+        sentiment,
+        topic_tags,
+        keywords,
+        processed_at)
         VALUES %s
     """
     values = [
@@ -136,13 +155,13 @@ def save_processed_comments(**context):
 
 
 with DAG(
-    dag_id="Process_Sentiment_topicmodelling_reddit",
-    start_date=datetime(2025, 4, 24),
-    schedule_interval="0 2 * * 1",  # 每週1 早上 6 點
-    catchup=True,
-    max_active_runs=1,
-    dagrun_timeout=timedelta(minutes=60),
-    tags=["nlp", "reddit", "topic-analysis"]
+    dag_id = "Process_Sentiment_topicmodelling_reddit",
+    start_date = datetime(2025, 4, 24),
+    schedule_interval = "0 5 * * 6",  
+    catchup = False,
+    max_active_runs = 1,
+    dagrun_timeout = timedelta(minutes=60),
+    tags = ["nlp", "reddit", "topic-analysis"]
 ) as dag:
 
     t1 = PythonOperator(task_id="fetch_recent_comments", python_callable=fetch_recent_comments)

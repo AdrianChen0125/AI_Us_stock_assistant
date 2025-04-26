@@ -7,17 +7,23 @@ import re, os
 from langdetect import detect, LangDetectException
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
+import nltk
 import torch
 from bertopic import BERTopic
+from sentence_transformers import SentenceTransformer
 from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassification
 from collections import defaultdict
 import random
 
 
 model_name = "nlptown/bert-base-multilingual-uncased-sentiment"
+model_base = os.getenv("MODEL_PATH", "/opt/airflow/models")
+sentiment_path = os.path.join(model_base, "nlptown/bert-base-multilingual-uncased-sentiment")
+embedding_model = SentenceTransformer("all-MiniLM-L6-v2", cache_folder=os.getenv("MODEL_PATH", "/opt/airflow/models"))
+
 tokenizer = None
 model = None
-
+nltk.download('punkt')
 
 def fetch_recent_comments(**context):
     exec_date = context['execution_date'].date()
@@ -37,17 +43,17 @@ def fetch_recent_comments(**context):
     context['ti'].xcom_push(key='raw_comment_texts', value=[{"comment_id": r[0], "text": r[1]} for r in rows])
 
 
-def clean_texts(**context):
-    stop_words = set(stopwords.words('english'))
 
 def clean_texts(**context):
     raw = context['ti'].xcom_pull(key='raw_comment_texts')
+    stop_words = set(stopwords.words('english'))
+    nltk.download('punkt')
 
     def clean(text):
         text = re.sub(r"http\S+", "", text)  # remove URLs
         text = re.sub(r"[^\w\s]", "", text)  # remove punctuation
         text = text.lower().strip()
-        tokens = word_tokenize(text)
+        tokens = word_tokenize(text,language='english')
         filtered_tokens = [w for w in tokens if w not in stop_words]
         return " ".join(filtered_tokens) if len(filtered_tokens) > 3 else None
 
@@ -69,13 +75,16 @@ def clean_texts(**context):
     context['ti'].xcom_push(key='cleaned_comments', value=cleaned)
     print(f"Filtered and cleaned {len(cleaned)} English comments.")
 
-
 def analyze_sentiment(text):
     global tokenizer, model
+
     if tokenizer is None or model is None:
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
-        model = AutoModelForSequenceClassification.from_pretrained(model_name)
+
+        tokenizer = AutoTokenizer.from_pretrained(sentiment_path)
+        model = AutoModelForSequenceClassification.from_pretrained(sentiment_path)
+
     inputs = tokenizer(text, return_tensors="pt", truncation=True)
+
     with torch.no_grad():
         outputs = model(**inputs)
         scores = torch.nn.functional.softmax(outputs.logits, dim=1)
@@ -99,9 +108,11 @@ def run_bertopic(**context):
     ids = [c['comment_id'] for c in comments]
 
     # Decide whether to specify number of topics based on number of comments
+
     if len(comments) < 1000:
-        # Let the model determine the number of topics automatically
+        
         topic_model = BERTopic(
+            embedding_model = embedding_model,
             calculate_probabilities=False,
             language="english"
         )
@@ -109,6 +120,7 @@ def run_bertopic(**context):
         # Manually set number of topics to 20
         topic_model = BERTopic(
             nr_topics=20,
+            embedding_model = embedding_model,
             calculate_probabilities=False,
             language="english"
         )
@@ -136,7 +148,13 @@ def save_processed_comments(**context):
     conn = hook.get_conn()
     cursor = conn.cursor()
     insert_sql = """
-        INSERT INTO processed_data.youtube_comments (comment_id, sentiment, topic_tags, keywords, processed_at)
+        INSERT INTO processed_data.youtube_comments (
+            comment_id,
+            sentiment,
+            topic_tags,
+            keywords,
+            processed_at
+            )
         VALUES %s
     """
     values = [
@@ -157,7 +175,7 @@ def save_processed_comments(**context):
 with DAG(
     dag_id="Process_Sentiment_topicmodelling_youtube",
     start_date=datetime(2025, 4, 24),
-    schedule_interval="0 3 * * 1",
+    schedule_interval="0 3 * * 6",
     catchup=True,
     max_active_runs=1,
     dagrun_timeout=timedelta(minutes=60),

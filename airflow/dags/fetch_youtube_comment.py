@@ -144,6 +144,7 @@ def collect_comments(**context):
                 if start_time <= published_dt <= end_time:
                     all_comments.append({
                         "video_id": video["video_id"],
+                        "comment_id": item["snippet"]["topLevelComment"]["id"],
                         "title": video["title"],
                         "channel": video["channel"],
                         "author": snippet.get("authorDisplayName"),
@@ -166,26 +167,38 @@ def collect_comments(**context):
 
 def bulk_insert_comments(**context):
     rows = context['ti'].xcom_pull(key='collected_comments')
-
     hook = PostgresHook(postgres_conn_id='aws_pg')
     conn = hook.get_conn()
     cursor = conn.cursor()
+    execution_date = context['execution_date'].date()
 
     insert_sql = """
-        INSERT INTO  raw_data.youtube_comments(video_id, title, channel, text, author, likes, published_at, collected_at)
+        INSERT INTO  raw_data.youtube_comments(
+        video_id,
+        comment_id,
+        title,
+        channel,
+        text, 
+        author, 
+        likes, 
+        published_at, 
+        collected_at
+        )
         VALUES %s
+        ON CONFLICT (comment_id) DO NOTHING
     """
 
     values = [
         (
             row["video_id"],
+            row['comment_id'],
             row.get("title"),
             row.get("channel"),
             row["text"],
             row.get("author"),
             row.get("likes", 0),
             row["published_at"],
-            datetime.utcnow()
+            execution_date
         )
         for row in rows
     ]
@@ -203,7 +216,7 @@ default_args = {
 }
 
 with DAG(
-    dag_id="fetch_youtube_commenty",
+    dag_id="fetch_youtube_comment",
     default_args=default_args,
     schedule_interval="0 0 * * *",
     catchup=True,

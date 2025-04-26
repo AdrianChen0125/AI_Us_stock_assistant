@@ -35,10 +35,8 @@ def fetch_sp500_data(**kwargs):
 
     data = []
     for symbol in df['symbol']:
-        print(symbol)
         try:
             info = yf.Ticker(symbol).info
-            print(info)
             data.append({
                 'symbol': symbol,
                 'company': info.get('longName') or symbol,
@@ -74,10 +72,22 @@ def insert_to_postgres(**kwargs):
     # 轉成 tuple list
     values = [
         (
-            r['symbol'], r['company'], r['sector'], r['sub_industry'],
-            r['market_cap'], r['volume'], r['previous_close'], r['open'],
-            r['day_high'], r['day_low'], r['pe_ratio'], r['forward_pe'],
-            r['dividend_yield'], r['beta'], r['high_52w'], r['low_52w'],
+            r['symbol'], 
+            r['company'], 
+            r['sector'], 
+            r['sub_industry'],
+            r['market_cap'], 
+            r['volume'], 
+            r['previous_close'], 
+            r['open'],
+            r['day_high'], 
+            r['day_low'], 
+            r['pe_ratio'], 
+            r['forward_pe'],
+            r['dividend_yield'], 
+            r['beta'], 
+            r['high_52w'], 
+            r['low_52w'],
             r['snapshot_date']
         )
         for r in records
