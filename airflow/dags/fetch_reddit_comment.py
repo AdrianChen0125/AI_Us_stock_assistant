@@ -130,7 +130,7 @@ def store_to_postgres(**kwargs):
             comment_id, subreddit, author, comment_text, created_utc, fetched_at
         )
         VALUES %s
-        ON CONFLICT (post_id) DO NOTHING;
+        ON CONFLICT (comment_id) DO NOTHING;
     """
 
     values = [

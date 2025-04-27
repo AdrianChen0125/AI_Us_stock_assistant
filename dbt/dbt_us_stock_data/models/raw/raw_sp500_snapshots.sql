@@ -20,4 +20,4 @@ SELECT
     low_52w,
     snapshot_date
 FROM
-    raw_data.sp500_snapshots
+    {{ source('raw_data', 'sp500_snapshots') }}

@@ -6,4 +6,4 @@ SELECT
     snapshot_time,
     price
 FROM
-    raw_data.market_snapshots
+    {{ source('raw_data', 'market_snapshots') }}

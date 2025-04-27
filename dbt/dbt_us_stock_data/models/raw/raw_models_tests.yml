@@ -1,0 +1,125 @@
+version: 2
+
+models:
+  - name: raw_youtube_comments
+    description: "Raw youtube comments data."
+    columns:
+      - name: comment_id
+        description: "Primary key."
+        tests:
+          - not_null
+      - name: text
+        description: "Comment text should not be empty."
+        tests:
+          - not_null
+  
+  - name: raw_reddit_comments
+    description: "Raw reddit comments data about us_stock."
+    columns:
+      - name: comment_id
+        description: "Primary key."
+        tests:
+          - not_null
+          - unique
+      - name: comment_text
+        description: "Comment text should not be empty."
+        tests:
+          - not_null
+
+  - name: raw_reddit_comments_sp500
+    description: "Raw reddit comments data about sp500."
+    columns:
+      - name: comment_id
+        description: "Primary key."
+        tests:
+          - not_null
+          - unique
+      
+      - name: symbol
+        description: "stock ticker"
+        tests:
+          - not_null
+
+      - name: company
+        description: "stock company name"
+        tests:
+          - not_null 
+
+      - name: comment_text
+        description: "Comment text should not be empty."
+        tests:
+          - not_null
+
+  - name: raw_economic_indicators
+    description: "economic index (CPI,FEDFUNDS,10Y TREASURY, Retail Sales, Consumer Sentiment Unemployment Rate )"
+    columns:
+      - name: series_id
+        description: "EIA series id"
+        tests:
+          - not_null
+      - name: date
+        description: "Data point date"
+        tests:
+          - not_null
+
+  - name: raw_market_snapshots
+    description: "Raw snapshot of market prices (NASDAQ, SP500, Bitcoin, etc)."
+    columns:
+      - name: market
+        description: "Market name, e.g., NASDAQ, SP500, BITCOIN."
+        tests:
+          - not_null
+
+      - name: snapshot_time
+        description: "Date when the snapshot was taken."
+        tests:
+          - not_null
+
+      - name: price
+        description: "Closing price at snapshot time."
+        tests: []
+
+  - name: raw_user_profiles
+    description: "Raw user profiles data from platform signup or survey."
+    columns:
+      - name: id
+        description: "Primary key for each user profile."
+        tests:
+          - not_null
+          - unique
+
+      - name: created_at
+        description: "Timestamp when the profile was created."
+        tests:
+          - not_null
+
+      - name: age
+        description: "Age of the user (text format)."
+        tests: []
+
+      - name: experience
+        description: "User's experience level."
+        tests: []
+
+      - name: interest
+        description: "Array of user's interests."
+        tests: []
+
+      - name: sources
+        description: "How the user heard about the platform."
+        tests: []
+
+      - name: risk
+        description: "User's risk appetite."
+        tests: []
+
+      - name: language
+        description: "Preferred language."
+        tests: []
+
+      - name: email
+        description: "User's email address (unique constraint)."
+        tests:
+          - unique
+    
+  

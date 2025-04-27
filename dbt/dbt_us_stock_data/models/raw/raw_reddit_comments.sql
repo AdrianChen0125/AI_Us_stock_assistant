@@ -8,4 +8,4 @@ SELECT
     created_utc,
     fetched_at
 FROM
-    raw_data.reddit_comments
+    {{ source('raw_data', 'reddit_comments') }}

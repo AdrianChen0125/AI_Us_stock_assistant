@@ -35,5 +35,7 @@ RUN python3 -c "\
 from sentence_transformers import SentenceTransformer; \
 SentenceTransformer('all-MiniLM-L6-v2', cache_folder='$MODEL_PATH')"
 
+RUN pip install dbt-core dbt-postgres
+
 # Copy DAGs
 COPY ./dags /opt/airflow/dags

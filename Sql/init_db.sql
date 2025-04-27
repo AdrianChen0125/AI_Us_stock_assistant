@@ -126,8 +126,9 @@ CREATE TABLE processed_data.reddit_comments_sp500 (
     author TEXT,
     comment_text TEXT,
     score INTEGER,
+    sentiment sentiment_type,
     created_utc TIMESTAMP,       
-    fetched_at TIMESTAMP 
+    fetched_at TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS processed_data.reddit_topic (
@@ -136,7 +137,17 @@ CREATE TABLE IF NOT EXISTS processed_data.reddit_topic (
     keywords TEXT[],
     topic_summary TEXT,
     comments_count INTEGER,
-    post_count INTEGER,
+    neg_count INTEGER,
+    pos_count INTEGER,
+    created_at TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS processed_data.youtube_topic (
+    topic_date DATE,
+    topic_tags TEXT[],
+    keywords TEXT[],
+    topic_summary TEXT,
+    comments_count INTEGER,
     neg_count INTEGER,
     pos_count INTEGER,
     created_at TIMESTAMP

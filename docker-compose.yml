@@ -29,6 +29,7 @@
         - ./airflow/dags:/opt/airflow/dags
         - ./airflow/logs:/opt/airflow/logs
         - ./airflow/plugins:/opt/airflow/plugins
+        - ./dbt:/opt/airflow/dbt
       command: >
         bash -c "
           airflow db init &&

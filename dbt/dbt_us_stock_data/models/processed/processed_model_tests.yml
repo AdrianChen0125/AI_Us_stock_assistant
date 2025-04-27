@@ -1,0 +1,138 @@
+version: 2
+
+models:
+  - name: processed_user_profiles
+    description: "Processed and cleaned user profiles."
+    columns:
+      - name: id
+        tests:
+          - not_null
+          - unique
+      - name: email
+        tests:
+          - unique
+
+  - name: processed_market_snapshots
+    description: "Processed market snapshots with clean market names and no NULL prices."
+    columns:
+      - name: market
+        tests:
+          - not_null
+      - name: snapshot_time
+        tests:
+          - not_null
+      - name: price
+        tests:
+          - not_null
+
+  - name: processed_youtube_comments
+    description: "Processed YouTube comments with non-empty texts."
+    columns:
+      - name: comment_id
+        tests:
+          - not_null
+          - unique
+      - name: text
+        tests:
+          - not_null
+      - name: published_at
+        tests:
+          - not_null
+
+  - name: processed_reddit_comments_sp500
+    description: "Processed Reddit comments targeting S&P500 companies."
+    columns:
+      - name: comment_id
+        tests:
+          - not_null
+          - unique
+      - name: symbol
+        tests:
+          - not_null
+      - name: comment_text
+        tests:
+          - not_null
+
+  - name: processed_reddit_comments
+    description: "Processed general Reddit comments."
+    columns:
+      - name: comment_id
+        tests:
+          - not_null
+          - unique
+      - name: subreddit
+        tests:
+          - not_null
+      - name: comment_text
+        tests:
+          - not_null
+
+  - name: processed_economic_indicators
+    description: "Processed economic indicators with non-null values."
+    columns:
+      - name: series_id
+        tests:
+          - not_null
+      - name: date
+        tests:
+          - not_null
+      - name: value
+        tests:
+          - not_null
+
+  - name: processed_sp500_snapshots
+    description: "Processed S&P500 stock snapshot data with clean symbols."
+    columns:
+      - name: symbol
+        tests:
+          - not_null
+      - name: snapshot_date
+        tests:
+          - not_null
+
+
+  - name: processed_youtube_comments_with_sentiment_topic
+    description: "Processed YouTube comments after sentiment and topic tagging."
+    columns:
+      - name: processed_id
+        tests:
+          - not_null
+          - unique
+      - name: comment_id
+        tests:
+          - not_null
+          
+      - name: sentiment
+        tests:
+          - accepted_values:
+              values: ['positive', 'neutral', 'negative']
+
+  - name: processed_reddit_comments_with_sentiment_topic
+    description: "Processed Reddit comments after sentiment and topic tagging."
+    columns:
+      - name: processed_id
+        tests:
+          - not_null
+          - unique
+      - name: comment_id
+        tests:
+          - not_null
+      - name: sentiment
+        tests:
+          - accepted_values:
+              values: ['positive', 'neutral', 'negative']
+
+  - name: processed_reddit_comments_sp500_with_sentiment
+    description: "Processed Reddit comments specifically for S&P500 stocks."
+    columns:
+      - name: comment_id
+        tests:
+          - not_null
+          - unique
+      - name: symbol
+        tests:
+          - not_null
+      - name: sentiment
+        tests:
+          - accepted_values:
+              values: ['positive', 'neutral', 'negative']

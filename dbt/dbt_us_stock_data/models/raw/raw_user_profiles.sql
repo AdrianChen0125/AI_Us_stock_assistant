@@ -11,4 +11,4 @@ SELECT
     language,
     email
 FROM
-    raw_data.user_profiles
+    {{ source('raw_data', 'user_profiles') }}

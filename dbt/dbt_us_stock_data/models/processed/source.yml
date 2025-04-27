@@ -1,0 +1,10 @@
+sources:
+  - name: processed_data
+    database: ytdb
+    schema: processed_data
+    tables:
+      - name: youtube_comments
+      - name: reddit_comments
+      - name: reddit_comments_sp500
+      - name: reddit_topic
+      - name: youtube_topic 

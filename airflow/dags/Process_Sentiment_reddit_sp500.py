@@ -138,7 +138,8 @@ def save_to_postgres(**kwargs):
             subreddit, 
             author, 
             comment_text,
-            score, 
+            score,
+            sentiment, 
             created_utc, 
             fetched_at
         )
@@ -154,6 +155,7 @@ def save_to_postgres(**kwargs):
             r["author"],
             r["text"],
             r["score"],
+            r["sentiment"],
             r["created_utc"],
             kwargs['execution_date'].date()
         ) for r in comments

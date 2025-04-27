@@ -1,0 +1,14 @@
+version: 2
+
+sources:
+  - name: raw_data
+    database: ytdb
+    schema: raw_data
+    tables:
+      - name: economic_indicators
+      - name: market_snapshots
+      - name: reddit_comments_sp500
+      - name: reddit_comments
+      - name: sp500_snapshots
+      - name: user_profiles
+      - name: youtube_comments

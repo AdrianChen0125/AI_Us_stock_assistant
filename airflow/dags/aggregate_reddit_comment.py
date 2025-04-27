@@ -14,7 +14,6 @@ def extract_and_aggregate(**kwargs):
             topic_tags AS topic,
             keywords,
             COUNT(*) AS comments_count,
-            COUNT(DISTINCT post_id) AS post_count,
             SUM(CASE WHEN sentiment = 'negative' THEN 1 ELSE 0 END) AS neg_count,
             SUM(CASE WHEN sentiment = 'positive' THEN 1 ELSE 0 END) AS pos_count
         FROM processed_data.reddit_comments
@@ -31,7 +30,7 @@ def generate_topic_summaries(**kwargs):
     summaries = []
 
     for row in records:
-        topic_date, topic_tag, keywords, comments_count, post_count, neg_count, pos_count = row
+        topic_date, topic_tag, keywords, comments_count, neg_count, pos_count = row
         prompt = (
         f"""
         These keywords are collected from Reddit comments related to U.S. stock market discussions, "
@@ -53,7 +52,6 @@ def generate_topic_summaries(**kwargs):
             'keywords': keywords,
             'topic_summary': topic_summary,
             'comments_count': comments_count,
-            'post_count': post_count,
             'neg_count': neg_count,
             'pos_count': pos_count
         })
@@ -66,9 +64,16 @@ def insert_into_table(**kwargs):
 
     execution_date = kwargs['execution_date'].date()
     insert_query = """
-        INSERT INTO processed_data.reddit_topic 
-        (topic_date, topic_tags, keywords, topic_summary, comments_count, post_count, neg_count, pos_count, created_at) 
-        VALUES (%s, %s, %s, %s, %s, %s, %s,%s, %s)
+        INSERT INTO processed_data.reddit_topic (
+        topic_date,
+        topic_tags,
+        keywords,
+        topic_summary, 
+        comments_count, 
+        neg_count, 
+        pos_count, 
+        created_at) 
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
     """
 
     for record in summaries:
@@ -78,7 +83,6 @@ def insert_into_table(**kwargs):
             record['keywords'],
             record['topic_summary'],
             record['comments_count'],
-            record['post_count'],
             record['neg_count'],
             record['pos_count'],
             execution_date
@@ -96,7 +100,7 @@ default_args = {
 with DAG(
     dag_id = 'reddit_topic_summary',
     default_args = default_args,
-    schedule_interval = '0 2 * * 1',
+    schedule_interval = '0 5 * * 6',
     catchup = True,
     tags = ['processed','reddit']
 )as dag:

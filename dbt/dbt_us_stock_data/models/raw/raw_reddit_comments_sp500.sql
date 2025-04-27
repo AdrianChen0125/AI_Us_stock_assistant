@@ -13,4 +13,4 @@ SELECT
     created_utc,
     fetched_at
 FROM
-    raw_data.reddit_comments_sp500
+    {{ source('raw_data', 'reddit_comments_sp500') }}

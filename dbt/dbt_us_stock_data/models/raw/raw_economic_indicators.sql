@@ -7,4 +7,4 @@ SELECT
     date,
     fetched_at
 FROM
-    raw_data.economic_indicators
+    {{ source('raw_data', 'economic_indicators') }}

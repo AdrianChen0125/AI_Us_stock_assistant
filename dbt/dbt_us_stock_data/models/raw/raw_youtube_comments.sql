@@ -11,4 +11,4 @@ SELECT
     published_at,
     collected_at
 FROM
-    raw_data.youtube_comments
+    {{ source('raw_data', 'youtube_comments') }}
