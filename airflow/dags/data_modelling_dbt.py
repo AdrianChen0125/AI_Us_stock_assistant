@@ -21,6 +21,6 @@ with DAG(
         task_id="run_dbt_project",
         bash_command="""
             cd /opt/airflow/dbt/dbt_us_stock_data && \
-            dbt run --profiles-dir /opt/airflow/dbt/dbt_us_stock_data
+            dbt run 
         """
     )

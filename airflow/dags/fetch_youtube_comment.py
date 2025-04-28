@@ -220,7 +220,7 @@ with DAG(
     default_args = default_args,
     start_date = datetime(2025, 4, 24),
     schedule_interval = "0 0 * * *",
-    catchup = True,
+    catchup = False,
     tags=["raw", "youtube", "us stocks"],
 ) as dag:
 

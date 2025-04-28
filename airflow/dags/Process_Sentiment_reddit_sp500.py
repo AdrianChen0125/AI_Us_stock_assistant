@@ -180,7 +180,7 @@ with DAG(
     default_args = default_args,
     start_date=datetime(2025, 4, 24),
     schedule_interval="0 4 * * 6",  
-    catchup=True,
+    catchup=False,
     max_active_runs=1,
     dagrun_timeout=timedelta(minutes=60),
     tags=["processed", "reddit", "sp500","sentiment"]

@@ -97,7 +97,7 @@ with DAG(
     default_args = default_args,
     start_date = datetime (2025, 4, 25),
     schedule_interval = "0 5 * * 6",  
-    catchup = True,
+    catchup = False,
     tags = ["raw", "economic"]
     
 ) as dag: 

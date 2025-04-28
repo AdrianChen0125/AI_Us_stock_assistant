@@ -102,7 +102,7 @@ with DAG(
     dag_id = 'youtube_topic_summary',
     default_args = default_args,
     schedule_interval = '0 5 * * 6',
-    catchup = True,
+    catchup = False,
     tags = ['processed','youtube']
 )as dag:
 

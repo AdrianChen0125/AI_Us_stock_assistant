@@ -164,7 +164,7 @@ with DAG(
     default_args = default_args,
     start_date = datetime(2025, 4, 24),
     schedule_interval = "@daily",
-    catchup = True,
+    catchup = False,
     tags = ["raw", "reddit", "us_stock"]
     
 ) as dag:
