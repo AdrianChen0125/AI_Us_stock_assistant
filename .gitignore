@@ -28,3 +28,6 @@ build/
 # 本地憑證、API金鑰等敏感資料
 *.env
 *.key
+
+#mlflow db 
+mlflow.db

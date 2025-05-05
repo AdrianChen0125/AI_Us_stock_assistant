@@ -144,6 +144,7 @@ def save_to_postgres(**kwargs):
             fetched_at
         )
         VALUES %s
+        ON CONFLICT (comment_id) DO NOTHING
     """
     values = [
         (

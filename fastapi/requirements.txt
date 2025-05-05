@@ -1,3 +1,29 @@
+# Web framework
 fastapi
-uvicorn
-requests
+uvicorn[standard]
+
+# Database
+sqlalchemy
+asyncpg
+psycopg2-binary
+
+# Config
+python-dotenv
+pydantic[email]
+
+# HTTP Client
+httpx
+
+# Data
+pandas
+scikit-learn
+joblib
+dill
+# MLflow for model loading
+mlflow
+boto3
+# Optional: LLM integrations
+langchain
+langgraph
+openai
+anthropic

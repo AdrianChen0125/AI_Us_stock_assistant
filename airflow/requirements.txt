@@ -1,30 +1,34 @@
-# Airflow Providers
+# === Airflow Core & Providers ===
+apache-airflow==2.8.1
 apache-airflow-providers-postgres>=5.0.0
 apache-airflow-providers-http
 airflow-provider-mlflow==1.1.0
 
-# External API
+# === External API Clients ===
 requests
 openai
 praw
 yfinance
 
-# for json 
+# === JSON Parsing & Date Handling ===
 python-dateutil
 simplejson
 
-# Postgres 
+# === Database Driver ===
 psycopg2-binary
 
-# .env 支援
+# === Env File Support ===
 python-dotenv
 
-# NLP & ML 
-transformers 
-torch 
-langdetect 
-scikit-learn 
-bertopic 
+# === NLP & Machine Learning ===
+transformers
+torch
+langdetect
+scikit-learn
+bertopic
 hf_xet
 tiktoken>=0.5.1
 nltk
+
+# === Optional (for sentence-transformers used in BERTopic) ===
+sentence-transformers

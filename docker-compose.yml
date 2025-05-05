@@ -10,7 +10,6 @@
       volumes:
         - postgres_data:/var/lib/postgresql/data
 
-
     airflow-webserver:
       build: ./airflow
       container_name: airflow-webserver
@@ -21,6 +20,7 @@
         - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
         - AIRFLOW__WEBSERVER__WEB_SERVER_PORT=8080
         - AIRFLOW__CORE__FERNET_KEY=pAq1xg4zRQmS6jQy5_dhMcgJzG89EXs3rRR8uYwPPAg=
+        - PYTHONPATH=/opt/airflow/plugins
       env_file:
         - .env
       ports:
@@ -31,6 +31,7 @@
         - ./airflow/plugins:/opt/airflow/plugins
         - ./dbt:/opt/airflow/dbt
         - ~/.dbt:/home/airflow/.dbt
+        - ./airflow/include:/opt/airflow/include
       command: >
         bash -c "
           airflow db init &&
@@ -48,6 +49,7 @@
         - AIRFLOW__CORE__EXECUTOR=LocalExecutor
         - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
         - AIRFLOW__CORE__FERNET_KEY=pAq1xg4zRQmS6jQy5_dhMcgJzG89EXs3rRR8uYwPPAg=
+        - PYTHONPATH=/opt/airflow/plugins
       env_file:
         - .env
       volumes:
@@ -56,29 +58,41 @@
         - ./airflow/plugins:/opt/airflow/plugins
         - ./dbt:/opt/airflow/dbt
         - ~/.dbt:/home/airflow/.dbt
+        - ./airflow/include:/opt/airflow/include
 
       command: >
         bash -c "
           exec airflow scheduler
         "
 
+    mlflow:
+      build: ./mlflow_pr
+      container_name: mlflow
+      ports:
+        - "5001:5001"  
+      environment:
+        BACKEND_STORE_URI: sqlite:///mlflow.db
+        ARTIFACT_ROOT: s3://mlflow-artifacts-adrian
+        AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+        AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+        AWS_DEFAULT_REGION: us-east-1
+        MLFLOW_TRACKING_URI: http://0.0.0.0:5001
+      volumes:
+        - ./mlflow_pr/mlflow.db:/mlflow.db
+
     fastapi:
       build: ./fastapi
       container_name: fastapi
-      depends_on:
-        - airflow-scheduler
       env_file:
         - .env
       ports:
         - "8000:8000"
       volumes:
-        - ./fastapi:/app
+        - ./fastapi/app:/app
 
     gradio:
       build: ./gradio
       container_name: gradio
-      depends_on:
-        - fastapi
       env_file:
         - .env
       ports:

@@ -60,68 +60,57 @@ def send_email_report(to_email, subject, report_content):
         return f"Failed to send email: {e}"
 
 # ---------- Data Fetching ----------
-def fetch_economic_index_summary():
+API_BASE = "http://fastapi:8000"
+def fetch_economic_index_summary(index_name: str = None, days: int = 180):
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT 
-            month_date, 
-            series_id, 
-            current_month_value
-            FROM dbt_us_stock_data_production.economic_index
-            WHERE month_date >= NOW()::date - INTERVAL '1 year'
-            ORDER BY series_id, month_date;
-        """)
-        rows = cursor.fetchall()
-        if not rows:
-            return pd.DataFrame(), "No data found"
-        
-        df = pd.DataFrame(rows, columns=["date", "index_name", "value"])
-        
-        summary = "\n".join([f"{r[0]} | {r[1]} | {r[2]}" for r in rows])
-        return df,summary
-    
-    except Exception as e:
-        return pd.DataFrame(), f"Database error: {e}"
-    finally:
-        if cursor: cursor.close()
-        if conn: conn.close()
+        params = {"days": days}
+        if index_name:
+            params["index_name"] = index_name
 
-def fetch_market_price_summary():
-    conn = None
-    cursor = None
-    try:
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT snapshot_time, market, price, ma_3_days, ma_5_days, ma_7_days
-            FROM dbt_us_stock_data_production.market_price
-            WHERE snapshot_time >= (CURRENT_DATE - INTERVAL '1 month')
-            ORDER BY market, snapshot_time;
-        """)
-        rows = cursor.fetchall()
-        
-        if not rows:
+        response = requests.get(f"{API_BASE}/economic_index", params=params)
+        response.raise_for_status()
+        data = response.json()
+
+        if not data:
             return pd.DataFrame(), "No data found"
-        
-        df = pd.DataFrame(rows, columns=["date", "market", "price", "ma_3_days", "ma_5_days", "ma_7_days"])
-        
-        summary = "\n".join([
-            f"{date} | {market} | Price: {price} | MA(3): {ma3} | MA(5): {ma5} | MA(7): {ma7}"
-            for date, market, price, ma3, ma5, ma7 in rows
-        ])
-        
+
+        df = pd.DataFrame(data)
+
+        summary = "\n".join([f"{row['date']} | {row['index_name']} | {row['value']}" for row in data])
         return df, summary
-    
+
     except Exception as e:
-        return pd.DataFrame(), f"Database error: {e}"
+        print("API ERROR:", e)
+        return pd.DataFrame(), f"API error: {e}"
     
-    finally:
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
+def fetch_market_price_summary(market):
+    try:
+        res = requests.get(
+            f"{API_BASE}/market_price", 
+            params={"market": market}
+        )
+        res.raise_for_status()
+        data = res.json()
+
+        if not data:
+            return pd.DataFrame(), "No data"
+
+        df = pd.DataFrame(data)
+        df["date"] = pd.to_datetime(df["date"])
+
+        df = df[["date", "market", "price"]]
+
+        summary = "\n".join([
+            f"{row['date'].date()} | {row['market']} | Price: {row['price']}"
+            for _, row in df.iterrows()
+        ])
+
+        return df, summary
+
+    except Exception as e:
+        print("API error:", e)
+        return pd.DataFrame(), f"API error: {e}"
+        return pd.DataFrame(), f"API error: {e}"
 
 def fetch_overall_sentiment_summary():
     conn, cursor = None, None
@@ -143,6 +132,32 @@ def fetch_overall_sentiment_summary():
         if cursor: cursor.close()
         if conn: conn.close()
 
+def fetch_sentiment_data():
+    try:
+        res = requests.get(f"{API_BASE}/sentiment/reddit_summary/compare")
+        res.raise_for_status()
+        data = res.json()
+
+        df = pd.DataFrame([
+            {
+                "label": "This Week",
+                "date": data["recent_7d"]["date"],
+                "total": data["recent_7d"]["total"],
+                "positive": data["recent_7d"]["positive"],
+                "negative": data["recent_7d"]["negative"]
+            },
+            {
+                "label": "Last Week",
+                "date": data["prev_7d"]["date"],
+                "total": data["prev_7d"]["total"],
+                "positive": data["prev_7d"]["positive"],
+                "negative": data["prev_7d"]["negative"]
+            }
+        ])
+        return df, None
+    except Exception as e:
+        return pd.DataFrame(), f"❌ Failed to fetch: {e}"
+    
 def fetch_sentiment_topic_summary():
     try:
         conn = psycopg2.connect(**DB_CONFIG)
@@ -377,36 +392,74 @@ def plot_sentiment_line_chart():
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=df["published_at"], y=df["total_pc"], mode="lines+markers", name="Positive"))
     fig.add_trace(go.Scatter(x=df["published_at"], y=df["total_nc"], mode="lines+markers", name="Negative"))
-    fig.update_layout(title="📊 Reddit Daily Market Sentiment Trend ",height=350 ,xaxis_title="Date", yaxis_title="Comment Count")
+    fig.update_layout(title="📊 Reddit Daily Market Sentiment Trend ",height=515 ,xaxis_title="Date", yaxis_title="Comment Count")
     return fig
 
-def plot_index_chart(index_name, title):
-    df,summary = fetch_economic_index_summary()
-    print(df)
+def plot_sentiment_pie(df):
     if df.empty:
-        return go.Figure().update_layout(title="❌ Failed to load data")
+        return go.Figure().update_layout(title="No data"), go.Figure()
 
-    df = df[df["index_name"] == index_name].copy()
+    def make_pie_row(row):
+        neutral = max(row["total"] - row["positive"] - row["negative"], 0)
+        labels = ["Positive", "Neutral", "Negative"]
+        values = [row["positive"], neutral, row["negative"]]
+        title = f"{row['label']} ({row['date']})"
+        fig = go.Figure(data=[go.Pie(labels=labels, values=values,hole=0.4)])
+        fig.update_layout(title_text=title,height=250,margin=dict(t=10, b=10, l=10, r=10))
+        return fig
+
+    this_week_fig = make_pie_row(df.iloc[0])
+    last_week_fig = make_pie_row(df.iloc[1])
+
+    return this_week_fig, last_week_fig
+
+def plot_index_chart(df: pd.DataFrame, title: str = ""):
+    if df.empty:
+        return go.Figure().update_layout(title="Failed to load data")
+
     df["value"] = pd.to_numeric(df["value"], errors="coerce")
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(
-        x=df["date"], y=df["value"],
-        mode="lines+markers", name=index_name
+        x=df["date"],
+        y=df["value"],
+        mode="lines+markers",
+        name=title or "Index"
     ))
     fig.update_layout(
-        xaxis=dict(tickangle=-45,dtick="M3"),
-        margin=dict(l = 20, r = 20, t = 30, b = 30),
-        height=250
-        )
+        title=title,
+        xaxis=dict(tickangle=-45, dtick="M1"),
+        yaxis_title="Value",
+        xaxis_title="Date",
+        margin=dict(l=20, r=20, t=30, b=30),
+        height=350
+    )
+    return fig
+
+def plot_price_chart(market):
+    df, summary = fetch_market_price_summary(market)
+    if df.empty:
+        return go.Figure().update_layout(title="Failed to load data")
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=df["date"], y=df["price"],
+        mode="lines+markers", name=market
+    ))
+    fig.update_layout(
+        title=f"{market} - Price Trend (30 Days)",
+        xaxis_title="Date",
+        yaxis_title="Price",
+        height=350
+    )
     return fig
 
 def get_sentiment_table():
-                    df, _ = fetch_sentiment_topic_summary()
-                    last_time = df['date'].max().strftime("%Y-%m-%d %H:%M:%S")
-                    df1 = df[["source","positive", "negative","title"]]
-                    
-                    return df1, last_time 
+    df, _ = fetch_sentiment_topic_summary()
+    last_time = df['date'].max().strftime("%Y-%m-%d %H:%M:%S")
+    df1 = df[["source","positive", "negative","title"]]
+    
+    return df1, last_time 
 
 def plot_sector_chart():
     df, error = fetch_top5_sectors_this_week()
@@ -530,52 +583,16 @@ def generate_personal_report(age, experience, interest, sources, risk, langauge,
     except Exception as e:
         return f"Error generating report: {e}"
 
-def generate_report_from_economic_index(language):
-    df, _ = fetch_economic_index_summary()
-    if df.empty:
-        return "❌ 查無經濟數據資料，無法產生分析報告。"
-
-    summary_lines = []
-
-    for index in df["index_name"].unique():
-        sub_df = df[df["index_name"] == index]
-        recent = sub_df.sort_values("date").tail(6)
-        values = ", ".join([f"{d}={round(v,2)}" for d, v in zip(recent["date"], recent["value"])])
-        summary_lines.append(f"{index}：{values}")
-
-    summary_text = "\n".join(summary_lines)
-
-    # prompt
-    prompt = f"""
-    You are a professional economic and investment advisor. Based on the recent six-month trends of key economic indicators, write a clear and insightful **macroeconomic trend report ** in {language}.
-    Please structure your analysis in bullet points across the following three areas:
-    ### 📈 Inflation and Interest Rate Trends
-    - Analyze trends in CPI, FEDFUNDS, and GS10, and discuss potential drivers behind the changes
-    - Explain the implications for inflation control and monetary policy
-
-    ### 🛍️ Consumer Activity and Employment
-    - Observe trends and fluctuations in RSAFS, UMCSENT, and UNRATE
-    - Infer the likely phase of the current business cycle
-
-    ### 📊 Potential Impact on Financial Markets
-    - Discuss how macroeconomic developments may influence equities, bonds, and investor risk appetite
-
-    Here is the summarized data:
-    {summary_text}
-    """
+def get_economic_report(language):
 
     try:
-        res = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "你是一位總體經濟與投資分析師，擅長針對資料撰寫趨勢報告與專業建議。"},
-                {"role": "user", "content": prompt}
-            ]
-        )
-        return res.choices[0].message.content
-
+        res = requests.post("http://fastapi:8000/report/generate/", json={"language": language})
+        res.raise_for_status()
+        return res.text
     except Exception as e:
-        return f"❌ 報告產生錯誤：{e}"
+        print("Error fetching report:", e)
+        return "Failed to fetch report."
+
 
 # ----------send email-----------
 
@@ -637,6 +654,21 @@ def continue_chat_with_agent(history, user_input):
     ]
     return history, history, ""
 
+# ---------- dropdown 
+def get_index_list():
+                try:
+                    res = requests.get("http://fastapi:8000/economic_index/list")
+                    return res.json() if res.status_code == 200 else []
+                except Exception as e:
+                    print("Error loading index list:", e)
+                    return []
+def get_market_list():
+    try:
+        res = requests.get(f"{API_BASE}/market_price/list")
+        return res.json() if res.status_code == 200 else []
+    except Exception as e:
+        print("Market list error:", e)
+        return []
 # ---------- Gradio UI ----------
 with gr.Blocks() as demo:
     gr.Markdown("## 📊 Adrian's US Stock Weekly Report")
@@ -682,69 +714,75 @@ with gr.Blocks() as demo:
                         )
 
         with gr.Tab(" Economic Indicators"):
-
-            gr.Markdown("### 💸 Inflation & Interest Rates")
             with gr.Row():
-                cpi_chart = gr.Plot(label="CPI (CPIAUCSL)")
-                fedfunds_chart = gr.Plot(label="Fed Funds Rate (FEDFUNDS)")
-                gs10_chart = gr.Plot(label="10Y Treasury Yield (GS10)")
+                 with gr.Column(scale=1):
+                    gr.Markdown("### Economic Indicator 經濟指數")
+                    with gr.Row():
+                        index_dropdown = gr.Dropdown(label="Select Index",choices=get_index_list(),value=None,scale=2)
+                        days_input = gr.Number(label="Days Range",value=180,precision=0,scale=1)
+    
+                    chart_output = gr.Plot()
 
-            gr.Markdown("### 🛍️ Consumer Activity & Employment")
+                    def update_single_chart(index_name, days):
+                        if not index_name:
+                            return go.Figure().update_layout(title="Please select an index.")
+                        df, _ = fetch_economic_index_summary(index_name=index_name, days=int(days))
+                        return plot_index_chart(df, title=f"{index_name} Trend")
+                
+                    index_dropdown.change(fn=update_single_chart, inputs=[index_dropdown, days_input], outputs=chart_output)
+                    days_input.change(fn=update_single_chart, inputs=[index_dropdown, days_input], outputs=chart_output)
+
+                 with gr.Column(scale=1):
+                    gr.Markdown("### Market Price 市場走勢")
+
+                    market_dropdown = gr.Dropdown(label="Select Market", choices=get_market_list(), value=None)
+                    market_chart_output = gr.Plot()
+                    
+                    def update_market_chart(market):
+                        if not market:
+                            return go.Figure().update_layout(title="Please select a market.")
+                        df, _ = fetch_market_price_summary(market)
+                        return plot_price_chart(df, title=f"{market} Price Trend")
+
+
+                    market_dropdown.change(fn=plot_price_chart, inputs=[market_dropdown], outputs=[market_chart_output])
             
-            with gr.Row():
-                rsafs_chart = gr.Plot(label="Retail Sales (RSAFS)")
-                umcsent_chart = gr.Plot(label="Consumer Sentiment (UMCSENT)")
-                unrate_chart = gr.Plot(label="Unemployment Rate (UNRATE)")
-
-            update_all_btn = gr.Button("🔄 Update All Charts")
-
-            def update_all_economic_charts():
-                return (
-
-                    plot_index_chart("CPIAUCSL", "CPI"),
-                    plot_index_chart("FEDFUNDS", "Fed Funds Rate"),
-                    plot_index_chart("GS10", "10Y Treasury Yield"),
-                    plot_index_chart("RSAFS", "Retail Sales"),
-                    plot_index_chart("UMCSENT", "Consumer Sentiment"),
-                    plot_index_chart("UNRATE", "Unemployment Rate")
-                )
-
-            update_all_btn.click(
-                fn = update_all_economic_charts,
-                outputs=[
-                    cpi_chart, fedfunds_chart, gs10_chart,
-                    rsafs_chart, umcsent_chart, unrate_chart
-                ]
-            )
             gr.Markdown("###  AI Trend Insight")
 
-            ai_generated_report = gr.TextArea(label="📄 AI Analysis Report", lines=20)
+            ai_generated_report = gr.TextArea(label="📄 AI Analysis Report", lines=25)
             generate_btn = gr.Button(" Generate Trend Report")
 
-            def generate_report_eco(state):
-                lang = state["language"]
-                return generate_report_from_economic_index(lang)
             
             generate_btn.click(
-                fn = generate_report_eco,
-                inputs = [user_state],
-                outputs = ai_generated_report
-                )
-
-            demo.load(fn = update_all_economic_charts, outputs=[
-                    cpi_chart, fedfunds_chart, gs10_chart,
-                    rsafs_chart, umcsent_chart, unrate_chart
-                ])
+            fn=get_economic_report,
+            inputs=[language],
+            outputs=[ai_generated_report]
+        )
             
         with gr.Tab(" Market sentiments"):
-            gr.Markdown(" 📈 Sentiment and Topic ")
-            sentiment_chart = gr.Plot(label="Sentiment Line Chart")
-            chart_btn = gr.Button("🔄 Refresh")
+            with gr.Row():
+                with gr.Column(scale=1):  
+                    sentiment_chart = gr.Plot(label="Sentiment Line Chart")
+                    chart_btn = gr.Button(" Refresh Trend")
+                
+                with gr.Column(scale=1):  
+                    pie1 = gr.Plot(label="This Week Sentiment")
+                    pie2 = gr.Plot(label="Last Week Sentiment")
+                    pie_btn = gr.Button("Update Weekly Comparison")
+
+            def update_sentiment_pie():
+                df, err = fetch_sentiment_data()
+                if err:
+                    return go.Figure().update_layout(title=err), go.Figure(), err
+                fig1, fig2 = plot_sentiment_pie(df)
+                return fig1, fig2
+
             sentiment_table = gr.Dataframe(label=" Sentiment Topic Summary",wrap=True)
             last_time_text = gr.Markdown()
             table_btn = gr.Button("🔄 Refresh")
 
             gr.Markdown(" 📈 Pooular Sector and Ticker ")
+
             chart_output = gr.Plot(label="Weekly Top 5 Sector")
             last_time_text = gr.Markdown()
             refresh_btn1 = gr.Button("🔄 Refresh")
@@ -754,11 +792,11 @@ with gr.Blocks() as demo:
             refresh_btn2 = gr.Button("🔄 Refresh")
 
             refresh_btn1.click(
-                fn=plot_sector_chart,
+                fn= plot_sector_chart,
                 outputs=chart_output
             )
             refresh_btn2.click(
-                fn=fetch_top10_symbols_this_week,
+                fn= fetch_top10_symbols_this_week,
                  outputs=symbol_table
                  )
             
@@ -771,11 +809,16 @@ with gr.Blocks() as demo:
                 fn = get_sentiment_table,
                 outputs = sentiment_table
             )
+            pie_btn.click(
+                fn=update_sentiment_pie, 
+                outputs=[pie1, pie2]
+                )
 
             demo.load(fn=plot_sentiment_line_chart, outputs=sentiment_chart)
             demo.load(fn=get_sentiment_table, outputs=[sentiment_table,last_time_text])
             demo.load(fn=plot_sector_chart, outputs=chart_output)
             demo.load(fn=fetch_top10_symbols_this_week, outputs=symbol_table)
+            demo.load(fn=update_sentiment_pie, outputs=[pie1, pie2])
             
         with gr.Tab("📄 View Report"):
                 

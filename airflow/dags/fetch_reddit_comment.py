@@ -30,7 +30,7 @@ def get_reddit_posts(**kwargs):
 
     for submission in subreddit.search(
         query="us stock market",
-        sort="top",
+        sort="hot",
         time_filter="month",   # still search over past month, then filter precisely
         limit=200
     ):
