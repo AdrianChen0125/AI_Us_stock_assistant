@@ -14,7 +14,7 @@ mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 
 def load_latest_model(experiment_name: str = "stock_rc") -> mlflow.pyfunc.PyFuncModel:
     """
-    從指定 experiment 中載入最新成功訓練的 PyFunc 模型。
+    load latest model by experiment 
     """
     experiment = mlflow.get_experiment_by_name(experiment_name)
     if experiment is None:

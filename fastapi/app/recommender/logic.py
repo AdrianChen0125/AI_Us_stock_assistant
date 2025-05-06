@@ -1,3 +1,5 @@
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 import pandas as pd
 from sqlalchemy import create_engine
 from sklearn.preprocessing import StandardScaler
@@ -6,17 +8,19 @@ import os
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-model = load_latest_model()  # 預先加載（可換成 lazy）
+model = load_latest_model()  
 
-def load_latest_data():
-    engine = create_engine(DATABASE_URL)
-    query = """
-    SELECT * FROM dbt_us_stock_data_production.sp500_price
-    WHERE snapshot_date = (
-        SELECT MAX(snapshot_date) FROM dbt_us_stock_data_production.sp500_price
-    );
-    """
-    return pd.read_sql(query, engine)
+async def load_latest_data(db: AsyncSession) -> pd.DataFrame:
+    query = text("""
+        SELECT * FROM dbt_us_stock_data_production.sp500_price
+        WHERE snapshot_date = (
+            SELECT MAX(snapshot_date) FROM dbt_us_stock_data_production.sp500_price
+        );
+    """)
+    result = await db.execute(query)
+    rows = result.fetchall()
+    columns = result.keys()
+    return pd.DataFrame(rows, columns=columns)
 
 def preprocess(df):
     features = ["sector", "sub_industry", "market_cap", "volume", "previous_close", "pe_ratio", "dividend_yield"]
@@ -30,8 +34,8 @@ def preprocess(df):
     X[df_encoded.columns] = X[df_encoded.columns].astype(bool)
     return df.reset_index(drop=True), X
 
-def get_recommendations(symbols: list[str]):
-    df_raw = load_latest_data()
+async def get_recommendations(symbols: list[str], db: AsyncSession):
+    df_raw = await load_latest_data(db)
     df, X = preprocess(df_raw)
 
     target_mask = df["symbol"].isin(symbols)
