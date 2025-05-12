@@ -13,7 +13,6 @@ import json
 
 
 def fetch_sp500_data(**kwargs):
-    kwargs = get_current_context()
     snapshot_date = kwargs['execution_date']
 
     url = 'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies'
@@ -47,8 +46,10 @@ def fetch_sp500_data(**kwargs):
             continue
         time.sleep(0.5)
 
+
     ti = kwargs['ti']
-    ti.xcom_push(key='sp500_data', value = json.dumps(data))
+    ti.xcom_push(key='sp500_data', value=json.dumps(data))
+
 
 
 def insert_to_postgres(**kwargs):
@@ -92,6 +93,7 @@ def insert_to_postgres(**kwargs):
             previous_close, open, day_high, day_low, pe_ratio, forward_pe,
             dividend_yield, beta, high_52w, low_52w, snapshot_date
         ) VALUES %s
+        ON CONFLICT (symbol, snapshot_date) DO NOTHING
     """
     execute_values(cursor , insert_query, values)
     conn.commit()
@@ -105,7 +107,7 @@ def clean_old_snapshots():
 
     delete_sql = """
         DELETE FROM raw_data.sp500_snapshots
-        WHERE snapshot_date < CURRENT_DATE - INTERVAL '60 days';
+        WHERE snapshot_date < CURRENT_DATE - INTERVAL '90 days';
     """
 
     cursor.execute(delete_sql)

@@ -1,6 +1,5 @@
-# services/economic_index.py
+
 from sqlalchemy.orm import Session
-from database import get_db
 from models import EconomicIndex as EconomicIndexModel
 import pandas as pd
 from datetime import datetime, timedelta

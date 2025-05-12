@@ -2,7 +2,7 @@ from langgraph.graph import StateGraph, END
 from langgraph.channels import LastValue
 from typing import TypedDict,Annotated
 import pandas as pd
-from .nodes import *
+from .nodes.Eco_index_report import *
 
 class State(TypedDict):
     econ_df: Annotated[pd.DataFrame, LastValue(pd.DataFrame)]

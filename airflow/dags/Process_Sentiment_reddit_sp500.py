@@ -128,7 +128,7 @@ def save_to_postgres(**kwargs):
     hook = PostgresHook(postgres_conn_id='aws_pg')
     conn = hook.get_conn()
     cursor = conn.cursor()
-
+    
     insert_sql = """
         INSERT INTO processed_data.reddit_comments_sp500 (
             symbol, 

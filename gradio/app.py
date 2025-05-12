@@ -9,6 +9,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from openai import OpenAI
 from datetime import datetime, timedelta
+from datetime import date
 import requests
 from PIL import Image
 from io import BytesIO
@@ -30,6 +31,9 @@ DB_CONFIG = {
     "password": os.environ.get("DB_PASSWORD")}
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+API_BASE = "http://fastapi:8000"
+
 
 # langchain
 llm = ChatOpenAI(
@@ -60,7 +64,7 @@ def send_email_report(to_email, subject, report_content):
         return f"Failed to send email: {e}"
 
 # ---------- Data Fetching ----------
-API_BASE = "http://fastapi:8000"
+
 def fetch_economic_index_summary(index_name: str = None, days: int = 180):
     try:
         params = {"days": days}
@@ -225,7 +229,8 @@ def fetch_top10_symbols_this_week():
             return pd.DataFrame(), "No data found"
 
         df = pd.DataFrame(rows, columns=["🔥 Symbol", "💬 Comments", "👍 Positive", "👎 Negative"])
-        return df
+        summary = "\n".join([f"{r[0]} | {r[1]} | {r[2]} | {r[3]}" for r in rows])
+        return df,summary
 
     except Exception as e:
         return pd.DataFrame(), f"Database error: {e}"
@@ -266,7 +271,9 @@ def fetch_top5_sectors_this_week():
             return pd.DataFrame(), "No this week data"
 
         df = pd.DataFrame(rows, columns=["sector", "total_comments", "total_pos", "total_neg"])
-        return df, None
+
+        summary = "\n".join([f"{r[0]} | {r[1]} | {r[2]} | {r[3]}" for r in rows])
+        return df, summary
 
     except Exception as e:
         return pd.DataFrame(), f"Database error: {e}"
@@ -462,11 +469,7 @@ def get_sentiment_table():
     return df1, last_time 
 
 def plot_sector_chart():
-    df, error = fetch_top5_sectors_this_week()
-    if error or df.empty:
-        fig = go.Figure()
-        fig.update_layout(title="❌ Failed to load data", height=300)
-        return fig
+    df, _ = fetch_top5_sectors_this_week()
 
     fig = go.Figure()
 
@@ -493,111 +496,262 @@ def show_image(filename):
     image_path = os.path.join("/app/assets", filename)
     return Image.open(image_path)
 
-# ---------- Report Generation ----------
-def generate_personal_report(age, experience, interest, sources, risk, langauge, email):
-    
-    profile_info = f"""
-    User Profile:
-    - Age: {age}
-    - Experience: {experience}
-    - Preferences: {", ".join(interest)}
-    - Sources: {sources}
-    - Risk Tolerance: {risk}
-    """
+# ---------- stocke recommendation
 
-    df, sentiment_summary = fetch_sentiment_topic_summary()
-    df['news'] = df["keywords"].apply(search_news_for_keywords)
-    index_df, eco_index = fetch_economic_index_summary()
-    interested_news = search_news_for_keywords(sources)
-    _, market_summary = fetch_market_price_last_7_days()
-    top5_sector_df = fetch_top5_sectors_this_week()
+def g4_recommend_multi(symbols_raw, email):
+    # 處理輸入：切逗號、去空格、轉大寫
+    symbols = [s.strip().upper() for s in symbols_raw.split(",") if s.strip()]
+    print(f"[INPUT] 使用者輸入股票：{symbols}")
 
-    if langauge == 'chinese':
-        prompt = f"""
-        你是一位專業的投資顧問。以下是客戶資訊，請用**繁體中文**撰寫一份清晰、專業的投資分析與建議。
-        【客戶資料】
-        {profile_info}
-        ---
-        一、【經濟分析】
-        （a）分析過去六個月的經濟指標，找出重要轉折點並簡述宏觀趨勢：
-        {eco_index}
-        （b）最近一週市場價格總結：
-        {market_summary}
-        ---
-        二、【市場情緒與新聞】
-        （a）根據情緒摘要與新聞，判斷市場情緒（多頭/空頭），並指出受影響的產業或個股：
-        {sentiment_summary}
-        （b）分析 Reddit 討論最熱前五大產業及原因。
-        {top5_sector_df}
-        新聞摘要：
-        {df['news']}
-        ---
-        三、【使用者關注主題】
-        整理使用者關注標的的新聞與分析：
-        {interested_news}
-        ---
-        請以以下格式撰寫並根據 用戶 {profile_info} 訂製報告
-        - 經濟概覽
-        - 市場情緒分析
-        - 個股/主題推薦 等等
-        """
+    if not symbols:
+        return "請至少輸入一個股票代碼", ""
+
+    url = "http://fastapi:8000/recommend/"
+    # 組合查詢參數：symbols 多值 + user_id
+    params = [("symbols", s) for s in symbols]
+    if email:
+        params.append(("user_id", email))  # ✅ 傳入 email 當作 user_id
     else:
-        prompt = f"""
-        You are a professional investment advisor. Based on the following information, provide a clear and structured investment analysis and suggestion :
-        【User Profile】{profile_info}
-        ---
-        1. 【Economic Analysis】
-        (a) Analyze the economic indicators over the past 6 months, identify key turning points, and briefly describe the macroeconomic trends:
-        {eco_index} 
-        (b) market price in last week {market_summary}
-        ---
-        2. 【Market Sentiment & News】
-        (a) Based on the sentiment summary below and related news, determine market sentiment (bullish/bearish), and highlight impacted sectors or stocks also mention the news you found:
-        {sentiment_summary}
-        (b) Analyze why this top 5 popular sector discussed in reddit {top5_sector_df} 
-        News:
-        {df['news']}
-        ---
-        3. 【User's Focused Stocks or Topics】
-        News related to user's interest and mention the news you found:
-        {interested_news}
-        Provide insights, risk/opportunity assessment, and give a recommendation based on the above context.
-        ---
-        Present your response in this structure:
-        - Macroeconomic Overview
-        - Market Sentiment
-        - Stock/Topic Recommendation
-        """
+        params.append(("user_id", "anonymous"))
 
     try:
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        print("[API 回傳資料]", data)
+
+        if data.get("status") == "ok":
+            recs = data.get("recommendations", [])
+            return "", "\n".join(recs) if recs else "沒有推薦結果"
+        else:
+            return "推薦失敗，API 回傳非 ok 狀態", ""
+    except Exception as e:
+        return f"錯誤：{str(e)}", ""
+
+def fetch_industries():
+    try:
+        resp = requests.get(f"{API_BASE}/stock_data/sector_list")
+        return [""] + [i for i in resp.json() if i]
+    except Exception:
+        return []
+
+def fetch_max_date():
+    try:
+        resp = requests.get(f"{API_BASE}/stock_data/latest_date")
+        return pd.to_datetime(resp.json()).date()
+    except Exception:
+        return date.today()
+    
+def query_stock_data(symbol, sector, start_date, end_date):
+    try:
+        params = []
+
+        if symbol:
+            symbol_list = [s.strip() for s in symbol.split(",") if s.strip()]
+            for s in symbol_list:
+                params.append(("symbol", s))
+
+        if sector:
+            params.append(("sector", sector))
+        if start_date:
+            params.append(("start_date", start_date))
+        if end_date:
+            params.append(("end_date", end_date))
+
+        
+        resp = requests.get(f"{API_BASE}/stock_data", params=params)
+
+        if resp.status_code != 200:
+            return pd.DataFrame([{"錯誤": f"HTTP {resp.status_code}", "訊息": resp.text}])
+
+        try:
+            data = resp.json()
+        except Exception as e:
+            return pd.DataFrame([{"錯誤": "JSON decode error", "訊息": str(e)}])
+
+        if not data:
+            return pd.DataFrame([{"訊息": "查無資料"}])
+
+        return pd.DataFrame(data)
+
+    except Exception as e:
+        return pd.DataFrame([{"錯誤": "查詢失敗", "訊息": str(e)}])
+# ---------- Report Generation ----------
+
+def generate_overall_report(
+    economic_summary: str,
+    market_sentiment_summary: str,
+    stock_recommender_summary: str,
+    language: str = "English"
+):
+
+    try:
+        if language.lower() in ["chinese", "zh", "中文"]:
+            prompt = f"""請根據以下三份資料，撰寫一份完整的總體經濟與市場觀察分析報告。請以經濟學視角切入，語氣專業嚴謹，適度使用專有名詞並在首次出現時提供簡單解釋；同時須注意用詞清晰，讓一般讀者也能理解。
+
+📘 經濟概況報告：
+{economic_summary}
+
+📊 市場情緒報告：
+{market_sentiment_summary}
+
+📈 個股投資建議摘要：
+{stock_recommender_summary}
+
+請將報告組織為以下結構，每段明確針對對應資料內容：
+
+1. **經濟趨勢分析**：概述目前的總體經濟狀況（如 GDP、通膨、利率等），並說明這些指標可能對企業營運與一般消費者產生的實質影響。
+
+2. **市場情緒解讀**：從市場情緒資料中解析投資人當前的反應與風險偏好，並指出目前市場焦點產業與關鍵個股是否反映過度樂觀或謹慎的氛圍。
+
+3. **個股建議評析**：總結 AI 所提出的個股建議內容，說明推薦邏輯是否合理，並從產業分布或風險分散角度補充專業觀點。
+
+4. **整體結論與建議**：綜合上述段落，總結目前可採取的資產配置策略，包含對不同風險屬性的投資人應有的建議（如穩健型、成長型、保守型），並提醒應關注的潛在變數。
+
+字數控制在 600 字以內，語氣專業、條理清晰，避免過度艱澀，但不需過度簡化內容。
+"""
+        else:
+            prompt = f"""Based on the following three reports, generate a well-structured, professional market and economic outlook. The tone should be analytical and objective, incorporating appropriate financial terminology (with brief explanations when needed), but still understandable to a non-technical reader.
+
+📘 Economic Summary:
+{economic_summary}
+
+📊 Market Sentiment Report:
+{market_sentiment_summary}
+
+📈 Stock Recommendation Summary:
+{stock_recommender_summary}
+
+Your report (max ~600 words) should include the following structure:
+
+1. **Macroeconomic Overview**: Summarize the current macroeconomic conditions (e.g., GDP trends, inflation, interest rates) and explain how they may affect businesses and consumer behavior.
+
+2. **Market Sentiment Analysis**: Interpret investor behavior and risk appetite based on sentiment data, highlighting sectors or stocks receiving unusually high attention and whether sentiment appears justified.
+
+3. **Equity Recommendation Review**: Review the AI-generated stock recommendations, explaining the rationale behind them and offering professional insight into sector diversification and potential portfolio impact.
+
+4. **Conclusion and Strategic Suggestions**: Tie together the above sections into a cohesive summary. Offer tailored asset allocation guidance for different risk profiles (e.g., conservative, balanced, aggressive), and note any key risks or indicators to monitor.
+
+Maintain a clear and coherent narrative, with logical transitions between sections. The report should feel like a brief yet insightful investment commentary."""
+
         res = client.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are a financial advisor specialized in macroeconomic analysis and personalized investment advice."},
+                {"role": "system", "content": "You are a senior investment strategist who synthesizes multi-source information."},
                 {"role": "user", "content": prompt}
             ]
         )
-        global last_generated_report
-        last_generated_report = res.choices[0].message.content
-        return last_generated_report
-    except Exception as e:
-        return f"Error generating report: {e}"
 
-def get_economic_report(language):
+        report = res.choices[0].message.content
+        return report
+
+    except Exception as e:
+        return f"Error generating overall report: {e}"
+
+
+def get_economic_report(language='English'):
+    
 
     try:
         res = requests.post("http://fastapi:8000/report/generate/", json={"language": language})
         res.raise_for_status()
-        return res.text
+
+        return res.text, res.text
     except Exception as e:
         print("Error fetching report:", e)
         return "Failed to fetch report."
 
+def get_market_sentiment_report(language='English'):
+    
+    try:
+        df = fetch_overall_sentiment_summary()
+        _, sentiment_summary = fetch_sentiment_topic_summary()
+        _, top_sector_summary = fetch_top5_sectors_this_week()
+        _, symbol_summary = fetch_top10_symbols_this_week()
+
+        # 建立 prompt（中英切換）
+        if language.lower() in ['chinese', 'zh', '中文']:
+            prompt = f"""
+請根據以下三份美國股市市場情緒資料，撰寫一份深入的市場情緒分析報告。語氣應專業、客觀，內容應幫助一般投資者理解目前市場氣氛，並從中挖掘潛在的投資機會與需關注的主題。
+
+reddit:近30日針對美國股市情緒 {df}
+
+📌 1. 整體市場情緒摘要：
+{sentiment_summary}
+
+📊 2. 本週前五大熱門產業：
+{top_sector_summary}
+
+📈 3. 本週前十熱門股票：
+{symbol_summary}
+
+請撰寫約 400–600 字的分析報告，結構包含以下重點：
+
+1. **市場情緒變化趨勢**：說明投資人情緒是否偏向樂觀、保守或猶豫，並解釋可能的驅動因素。
+
+2. **產業與股票熱度解讀**：分析哪些產業與個股受到特別關注，是否有炒作或過熱跡象，以及這些現象是否可能持續。
+
+3. **資金可能流向與風險提示**：根據熱度資料推測潛在的市場流向，並提醒相關風險，例如短期投機、政策變數或估值泡沫。
+
+4. **關鍵話題推薦**：根據分析內容與前十熱門話題，列出讀者可進一步查詢的具體關鍵字或主題（如：「AI晶片」、「可再生能源補貼」、「聯準會會議紀要」、「半導體庫存」、「大型科技股回購」等）。
+
+5. **投資建議**：用淺白、務實的語言提出應對當前市場情緒的策略建議，例如：分散配置、短線觀望或聚焦基本面等。
+
+請讓報告條理清晰，段落分明，結尾可加入簡短總結或觀察方向。
+"""
+        else:
+            prompt = f"""
+You are a professional market analyst. Based on the following U.S. stock market sentiment data, generate a structured and insightful sentiment analysis report. The tone should be professional yet approachable, helping non-expert investors understand how public mood and discussions are shaping the market.
+
+Reddit sentiment data (past 30 days):
+{df}
+
+📌 1. Overall Sentiment Summary:
+{sentiment_summary}
+
+📊 2. Top 5 Sectors This Week:
+{top_sector_summary}
+
+📈 3. Top 10 Symbols This Week:
+{symbol_summary}
+
+Please organize your analysis into 4–5 clear paragraphs (approx. 400–600 words), covering the following:
+
+1. **Sentiment Trend Overview**: Identify whether current market sentiment appears optimistic, cautious, or divided. Highlight any major shifts or acceleration in discussions.
+
+2. **Sector & Symbol Focus**: Discuss any sectors or companies receiving disproportionate attention. Are there signs of overhype, speculation, or organic momentum?
+
+3. **Emerging Investment Themes**: From the data, extract recurring themes or market narratives (e.g., AI, clean energy, monetary policy). Describe how these are influencing investor perception.
+
+4. **Key Topics to Research**: Based on the top trending topics, suggest a list of specific themes or keywords that investors may want to research further (e.g., "Nvidia AI chips", "renewable subsidies", "Fed policy", "semiconductor inventory").
+
+5. **Practical Recommendations**: Offer simple, actionable guidance on how investors might position themselves based on the current sentiment climate—whether to stay cautious, diversify, or monitor specific trends.
+
+Conclude the report with a concise summary and any forward-looking considerations.
+"""
+        # 呼叫 GPT API
+        res = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a financial analyst specializing in interpreting market sentiment data."
+                },
+                {"role": "user", "content": prompt}
+            ]
+        )
+
+        report = res.choices[0].message.content
+        print(report) 
+        return report, report
+
+    except Exception as e:
+        return f"Error generating sentiment report: {e}"
 
 # ----------send email-----------
 
-def update_report_and_return(age, experience, interest, sources, risk,language, email):
-    return generate_personal_report(age, experience, interest, sources, risk,language, email)
+def update_report_and_return(economic_summary,market_sentiment_summary,stock_recommender_summary,language):
+    return generate_overall_report(economic_summary,market_sentiment_summary,stock_recommender_summary,language)
 
 def send_latest_report(email):
     return send_email_report(email, "Your Personalized Investment Report", last_generated_report)
@@ -676,7 +830,7 @@ with gr.Blocks() as demo:
 
     with gr.Tabs():
         # --- Tab 1: Questionnaire ---
-        with gr.Tab("Introduction page"):
+        with gr.Tab(" Main page (首頁) "):
             
             with gr.Row():    
                 with gr.Column(scale=1):
@@ -692,17 +846,17 @@ with gr.Blocks() as demo:
             👉 Take a moment to complete the short survey on the right to get started.
             """)
                     age = gr.Dropdown(["18-25", "26-35", "36-45", "46-60", "60+"], label="Your Age Group")
-                    experience = gr.Radio(["Beginner", "Intermediate", "Advanced"], label="Investment Experience")
+                    experience = gr.Radio(["Beginner", "Intermediate", "Advanced"],value="Intermediate", label="Investment Experience")
                     interest = gr.CheckboxGroup(
-                        ["Tech Stocks", "ETF", "High Dividend", "US Bonds", "Forex", "Crypto"],
+                        ["Tech Stocks", "ETF", "High Dividend", "US Bonds", "Forex", "Crypto"],value="High Dividend",
                         label="Investment Preferences"
                     )
                     sources = gr.Textbox(
                         label="Stock or Keywords You Follow",
                         placeholder="e.g., Nvidia, Tesla......"
                     )
-                    risk = gr.Radio(["Conservative", "Moderate", "Aggressive"], label="Risk Tolerance")
-                    language = gr.Radio(["English", "chinese"], label = "language")
+                    risk = gr.Radio(["Conservative", "Moderate", "Aggressive"],value="Moderate", label="Risk Tolerance")
+                    language = gr.Radio(["English", "chinese"],  value="English", label = "language")
                     email = gr.Textbox(label = "Your Email (for report delivery)", placeholder="example@email.com")
                     submit_btn = gr.Button("Submit")
                     output = gr.Textbox(label="Submission Status", interactive=False)
@@ -713,12 +867,16 @@ with gr.Blocks() as demo:
                         outputs=[output, user_state]
                         )
 
-        with gr.Tab(" Economic Indicators"):
+        with gr.Tab(" Economic & Market Trends（經濟與市場趨勢）"):
             with gr.Row():
                  with gr.Column(scale=1):
-                    gr.Markdown("### Economic Indicator 經濟指數")
+                    gr.Markdown("## Economic Indicator 經濟指數")
+                    
+                    print("Index list:", get_index_list())  # check if this is empty or fails
+                    print("Market list:", get_market_list())
+
                     with gr.Row():
-                        index_dropdown = gr.Dropdown(label="Select Index",choices=get_index_list(),value=None,scale=2)
+                        index_dropdown = gr.Dropdown(label="Select Index",choices = get_index_list(),value=None,scale=2)
                         days_input = gr.Number(label="Days Range",value=180,precision=0,scale=1)
     
                     chart_output = gr.Plot()
@@ -729,11 +887,21 @@ with gr.Blocks() as demo:
                         df, _ = fetch_economic_index_summary(index_name=index_name, days=int(days))
                         return plot_index_chart(df, title=f"{index_name} Trend")
                 
-                    index_dropdown.change(fn=update_single_chart, inputs=[index_dropdown, days_input], outputs=chart_output)
-                    days_input.change(fn=update_single_chart, inputs=[index_dropdown, days_input], outputs=chart_output)
+                    index_dropdown.change(
+                        fn=update_single_chart, 
+                        inputs=[index_dropdown, days_input], 
+                        outputs = chart_output,
+                        queue=True,
+                        )
+                    days_input.change(
+                        fn = update_single_chart, 
+                        inputs = [index_dropdown, days_input],
+                        outputs = chart_output,
+                        queue=True,
+                        )
 
                  with gr.Column(scale=1):
-                    gr.Markdown("### Market Price 市場走勢")
+                    gr.Markdown("## Market Price 市場走勢")
 
                     market_dropdown = gr.Dropdown(label="Select Market", choices=get_market_list(), value=None)
                     market_chart_output = gr.Plot()
@@ -747,25 +915,28 @@ with gr.Blocks() as demo:
 
                     market_dropdown.change(fn=plot_price_chart, inputs=[market_dropdown], outputs=[market_chart_output])
             
-            gr.Markdown("###  AI Trend Insight")
+            gr.Markdown("###  AI Agent 趨勢分析小幫手 ")
 
             ai_generated_report = gr.TextArea(label="📄 AI Analysis Report", lines=25)
+            economic_report_state = gr.State()
             generate_btn = gr.Button(" Generate Trend Report")
 
             
             generate_btn.click(
             fn=get_economic_report,
             inputs=[language],
-            outputs=[ai_generated_report]
+            outputs=[ai_generated_report,economic_report_state]
         )
             
-        with gr.Tab(" Market sentiments"):
+        with gr.Tab(" Market Sentiments (市場情緒) "):
             with gr.Row():
-                with gr.Column(scale=1):  
+                with gr.Column(scale=1): 
+                    gr.Markdown("###  Daily Sentiment about Us Stock 美股市場情緒(30日)") 
                     sentiment_chart = gr.Plot(label="Sentiment Line Chart")
                     chart_btn = gr.Button(" Refresh Trend")
                 
-                with gr.Column(scale=1):  
+                with gr.Column(scale=1):
+                    gr.Markdown("###  Weekly Reddit Sentiment about Us Stock 美股市場情緒(每週)")  
                     pie1 = gr.Plot(label="This Week Sentiment")
                     pie2 = gr.Plot(label="Last Week Sentiment")
                     pie_btn = gr.Button("Update Weekly Comparison")
@@ -777,38 +948,70 @@ with gr.Blocks() as demo:
                 fig1, fig2 = plot_sentiment_pie(df)
                 return fig1, fig2
 
+            gr.Markdown("###  Top 10 Topic about Us Stock 美股熱門討論話題") 
+
             sentiment_table = gr.Dataframe(label=" Sentiment Topic Summary",wrap=True)
             last_time_text = gr.Markdown()
             table_btn = gr.Button("🔄 Refresh")
 
-            gr.Markdown(" 📈 Pooular Sector and Ticker ")
+            def get_top_10_topic():
+                df,_ = get_sentiment_table()
+                return df
+                
+            table_btn.click(
+                fn = get_sentiment_table,
+                outputs = sentiment_table
+            )
 
-            chart_output = gr.Plot(label="Weekly Top 5 Sector")
-            last_time_text = gr.Markdown()
-            refresh_btn1 = gr.Button("🔄 Refresh")
+            with gr.Row():
+                with gr.Column(scale=1):
+                    gr.Markdown(" ### Pooular Sector and Ticker (熱門產業) ")
 
-            symbol_table = gr.Dataframe(wrap=True,label=" Top 10 Stock Discussions",interactive=False)
+                    chart_output = gr.Plot(label="Weekly Top 5 Sector")
+                    last_time_text = gr.Markdown()
+                    refresh_btn1 = gr.Button("🔄 Refresh")
+                
+                with gr.Column(scale=1):
+                    gr.Markdown(" ### Top 10 Stock Discussions (熱門標地) ")    
+                    symbol_table = gr.Dataframe(wrap = True,interactive=False)
 
-            refresh_btn2 = gr.Button("🔄 Refresh")
+                    refresh_btn2 = gr.Button("🔄 Refresh")
+
+            def fetch_top10_symbols_df():
+                df,_ = fetch_top10_symbols_this_week()
+                return df
+                
+            refresh_btn2.click(
+                fn= fetch_top10_symbols_df,
+                outputs=symbol_table
+                )
+
+
+            gr.Markdown("###  AI Agent 市場情緒分析小幫手 ")
+
+            ai_sentiment_report = gr.TextArea(label="📄 AI Analysis Report", lines=25)
+            sentiment_report_state = gr.State() 
+            sentiment_report_generate_btn = gr.Button(" Generate Trend Report")
+
+            
+            sentiment_report_generate_btn.click(
+            fn = get_market_sentiment_report,
+            inputs = [language],
+            outputs = [ai_sentiment_report,sentiment_report_state]
+            )
 
             refresh_btn1.click(
                 fn= plot_sector_chart,
-                outputs=chart_output
+                outputs= chart_output
             )
-            refresh_btn2.click(
-                fn= fetch_top10_symbols_this_week,
-                 outputs=symbol_table
-                 )
+           
             
             chart_btn.click(
                 plot_sentiment_line_chart,
                 outputs = sentiment_chart
                 )
 
-            table_btn.click(
-                fn = get_sentiment_table,
-                outputs = sentiment_table
-            )
+
             pie_btn.click(
                 fn=update_sentiment_pie, 
                 outputs=[pie1, pie2]
@@ -817,9 +1020,82 @@ with gr.Blocks() as demo:
             demo.load(fn=plot_sentiment_line_chart, outputs=sentiment_chart)
             demo.load(fn=get_sentiment_table, outputs=[sentiment_table,last_time_text])
             demo.load(fn=plot_sector_chart, outputs=chart_output)
-            demo.load(fn=fetch_top10_symbols_this_week, outputs=symbol_table)
+            demo.load(fn=fetch_top10_symbols_df, outputs=symbol_table)
             demo.load(fn=update_sentiment_pie, outputs=[pie1, pie2])
+
+
+        max_snapshot_date = fetch_max_date()
+        industries = fetch_industries()
+        with gr.Tab(" SP500 美股糾察隊"):
             
+            
+            gr.Markdown("### 股票推薦系統")
+
+            with gr.Row():
+                with gr.Column(scale=2):
+                    stock_input = gr.Textbox(
+                        label="輸入股票代碼（例如：GOOG, AAPL, MSFT）", lines=2, placeholder="GOOG, AAPL, MSFT"
+                    )
+                    submit_button = gr.Button("查詢推薦")
+                with gr.Column(scale=3):
+                    error_output = gr.Textbox(label="錯誤訊息", visible=False)
+                    recommend_output = gr.Textbox(label="推薦股票", lines=6)
+
+            submit_button.click(
+                fn=g4_recommend_multi,
+                inputs=[stock_input,email],
+                outputs=[error_output, recommend_output]
+            )
+            
+
+            gr.Markdown("### 🤖 AI 股票推薦分析")
+
+            with gr.Row():
+                holdings_input = gr.Textbox(label="目前持有股票 (逗號分隔)", placeholder="AAPL, TSLA")
+                recommended_input = gr.Textbox(label="推薦股票 (逗號分隔)", placeholder="MSFT, GOOG")
+
+            ai_output = gr.Textbox(label="AI 分析建議", lines=20)
+            stock_recommendation_state = gr.State()
+            analyze_button = gr.Button("分析推薦")
+
+            def call_ai_analysis(holdings, recommended, style, risk):
+                payload = {
+                    "holdings": [s.strip() for s in holdings.split(",") if s.strip()],
+                    "recommended": [s.strip() for s in recommended.split(",") if s.strip()],
+                    "style_preference":style,
+                    "risk_tolerance": risk
+                }
+                try:
+                    res = requests.post("http://fastapi:8000/ai/stock_recommender", json=payload)
+                    res.raise_for_status()
+                    result = res.json()["analysis"]
+                    return "\n\n".join(result.split("\n\n")) ,result
+                except Exception as e:
+                    return f"❌ Error: {str(e)}"
+
+            analyze_button.click(
+                fn=call_ai_analysis,
+                inputs=[holdings_input, recommended_input, interest, risk],
+                outputs=[ai_output,stock_recommendation_state]
+            )
+            
+            gr.Markdown("### 📊 S&P 500 Stock Data")
+
+            with gr.Row():
+                symbol_input = gr.Textbox(label="Symbol")
+                sector_input = gr.Dropdown(label="sector", choices = industries,value="")
+                start_date = gr.Textbox(label="Start Date (YYYY-MM-DD)", value=str(max_snapshot_date))
+                end_date = gr.Textbox(label="End Date (YYYY-MM-DD)", value=str(max_snapshot_date)) 
+
+            output = gr.Dataframe(label="查詢結果", interactive=False)
+            search_btn = gr.Button("查詢")
+
+            search_btn.click(
+                query_stock_data,
+                inputs=[symbol_input, sector_input, start_date, end_date],
+                outputs=output
+            )
+
         with gr.Tab("📄 View Report"):
                 
             output_text = gr.TextArea(label="📄 Report Content", lines=20) 
@@ -846,10 +1122,10 @@ with gr.Blocks() as demo:
 
                     
             # Function bindings
-
+            
             submit_btn.click(
                 fn = update_report_and_return,
-                inputs=[age, experience, interest, sources, risk,language, email],
+                inputs=[economic_report_state,sentiment_report_state,stock_recommendation_state,language],
                 outputs=output_text
             )
 

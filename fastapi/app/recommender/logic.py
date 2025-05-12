@@ -3,12 +3,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import pandas as pd
 from sqlalchemy import create_engine
 from sklearn.preprocessing import StandardScaler
-from recommender.model import load_latest_model
+from recommender.model import get_model 
 import os
+import mlflow
+from datetime import datetime 
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-model = load_latest_model()  
 
 async def load_latest_data(db: AsyncSession) -> pd.DataFrame:
     query = text("""
@@ -34,7 +35,32 @@ def preprocess(df):
     X[df_encoded.columns] = X[df_encoded.columns].astype(bool)
     return df.reset_index(drop=True), X
 
-async def get_recommendations(symbols: list[str], db: AsyncSession):
+
+
+#log record to mlflow
+
+def log_recommendation_to_mlflow(input_symbols, recommended_symbols, user_id="anonymous", source="gradio_ui"):
+    mlflow.set_experiment("recommendation_logs")
+    with mlflow.start_run(run_name=f"recommendation_{user_id}", nested=True):
+        mlflow.log_params({
+            "num_inputs": len(input_symbols),
+            "num_recommendations": len(recommended_symbols),
+            "user_id": user_id,
+            "source": source
+        })
+
+        mlflow.log_dict(
+            {
+                "user_id": user_id,
+                "source": source,
+                "timestamp": datetime.utcnow().isoformat(),
+                "input_symbols": input_symbols,
+                "recommended_symbols": recommended_symbols
+            },
+            artifact_file="recommendation.json"
+        )
+
+async def get_recommendations(symbols: list[str], db: AsyncSession, user_id: str = "anonymous"):
     df_raw = await load_latest_data(db)
     df, X = preprocess(df_raw)
 
@@ -47,9 +73,13 @@ async def get_recommendations(symbols: list[str], db: AsyncSession):
 
     cat_cols = target_df.columns.difference(["market_cap", "volume", "previous_close", "pe_ratio", "dividend_yield"])
     target_df[cat_cols] = target_df[cat_cols].astype(bool)
-
+    
+    model = get_model()
     result = model.predict(target_df)
     neighbor_indices = result.values[0]
     recommendations = df.iloc[neighbor_indices]["symbol"].tolist()
+
+    # ✅ Log 推薦資訊到 MLflow
+    log_recommendation_to_mlflow(symbols, recommendations, user_id=user_id)
 
     return recommendations

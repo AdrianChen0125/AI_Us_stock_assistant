@@ -12,10 +12,11 @@ router = APIRouter(
 
 @router.get("/")
 async def recommend_stocks(
-    symbols: List[str] = Query(..., description="List of stock symbols"),
+    symbols: List[str] = Query(...),
+    user_id: str = Query("anonymous"),
     db: AsyncSession = Depends(get_db)
 ):
-    result = await get_recommendations(symbols, db)
+    result = await get_recommendations(symbols, db, user_id=user_id)
 
     if isinstance(result, dict) and "error" in result:
         return {"status": "error", "message": result["error"]}

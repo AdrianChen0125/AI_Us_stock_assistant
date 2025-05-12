@@ -1,6 +1,7 @@
 # Web framework
 fastapi
 uvicorn[standard]
+gunicorn 
 
 # Database
 sqlalchemy
