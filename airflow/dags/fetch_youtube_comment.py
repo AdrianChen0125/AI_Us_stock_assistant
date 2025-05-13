@@ -25,12 +25,11 @@ def search_youtube(**kwargs):
         "q": query,
         "part": "snippet",
         "type": "video",
-        "maxResults": 50,
+        "maxResults": 100,
     }
 
     search_res = requests.get(search_url, params=search_params).json()
 
-    # Optional: filter locally by date
     filtered_video_ids = []
     for item in search_res.get("items", []):
         video_id = item["id"].get("videoId")
@@ -44,7 +43,7 @@ def search_youtube(**kwargs):
         kwargs['ti'].xcom_push(key='raw_videos', value=[])
         return
 
-    # 🔍 Fetch details
+    #  Fetch details
     video_url = "https://www.googleapis.com/youtube/v3/videos"
     video_params = {
         "key": YOUTUBE_API_KEY,
@@ -73,7 +72,6 @@ def search_youtube(**kwargs):
     kwargs['ti'].xcom_push(key='top_videos', value=top_videos)
 
 def filter_with_openai(**kwargs):
-    from openai import OpenAI
 
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     
@@ -88,8 +86,9 @@ def filter_with_openai(**kwargs):
 
     for vid in videos:
         prompt = f"""
-        Is this YouTube video title related to the U.S. stock market?
-        Title: "{vid['title']}" Answer yes or no:
+        The following is a YouTube video title: \"{vid['title']}\"
+        Is this video related to the U.S. stock market, financial markets, or investing topics?
+        If the connection is even somewhat relevant, respond with \"yes\", otherwise \"no\".
         """
 
         res = client.chat.completions.create(
@@ -108,8 +107,8 @@ def collect_comments(**kwargs):
     all_comments = []
 
     execution_date = kwargs['execution_date']  
-    start_time = execution_date 
-    end_time = execution_date + timedelta(days=1)
+    start_time = execution_date - timedelta(days=7)
+    end_time = execution_date 
 
     for video in top_videos:
         url = "https://www.googleapis.com/youtube/v3/commentThreads"
@@ -117,14 +116,14 @@ def collect_comments(**kwargs):
             "part": "snippet",
             "videoId": video["video_id"],
             "key": YOUTUBE_API_KEY,
-            "maxResults": 100,
+            "maxResults": 150,
             "textFormat": "plainText"
         }
 
         count = 0
         next_page_token = None
 
-        while count < 1000:
+        while count < 2000:
             if next_page_token:
                 params["pageToken"] = next_page_token
 
@@ -154,7 +153,7 @@ def collect_comments(**kwargs):
                     })
 
                     count += 1
-                    if count >= 1000:
+                    if count >= 2000:
                         break
 
             next_page_token = res.get("nextPageToken")
@@ -219,7 +218,7 @@ with DAG(
     dag_id = "fetch_youtube_comment",
     default_args = default_args,
     start_date = datetime(2025, 4, 24),
-    schedule_interval = "0 0 * * *",
+    schedule_interval = "0 0 * * 6",
     catchup = False,
     tags=["raw", "youtube", "us stocks"],
 ) as dag:

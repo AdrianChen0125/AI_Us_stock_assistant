@@ -101,6 +101,7 @@ with DAG(
     default_args={"retries": 1},
     schedule_interval="0 2 * * 6",  
     start_date=days_ago(1),
+    max_active_runs = 1,
     catchup=False,
     tags=["ml", "mlflow", "stocks"]
 ) as dag:

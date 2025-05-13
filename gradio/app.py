@@ -650,16 +650,14 @@ Maintain a clear and coherent narrative, with logical transitions between sectio
 
 
 def get_economic_report(language='English'):
-    
-
     try:
-        res = requests.post("http://fastapi:8000/report/generate/", json={"language": language})
+        res = requests.post("http://fastapi:8000/econamic_report/generate/", json={"language": language})
         res.raise_for_status()
 
-        return res.text, res.text
+        return res.text, res.text  
     except Exception as e:
         print("Error fetching report:", e)
-        return "Failed to fetch report."
+        return "Failed to fetch report.", None
 
 def get_market_sentiment_report(language='English'):
     

@@ -17,12 +17,12 @@ def extract_and_aggregate(**kwargs):
             SUM(CASE WHEN sentiment = 'negative' THEN 1 ELSE 0 END) AS neg_count,
             SUM(CASE WHEN sentiment = 'positive' THEN 1 ELSE 0 END) AS pos_count
         FROM processed_data.reddit_comments
-        WHERE processed_at::date = DATE '{execution_date}'
+        WHERE DATE(processed_at) = Date %s
         GROUP BY topic_date, topic, keywords
         Order by comments_count DESC
         LIMIT 5;
     """
-    records = pg_hook.get_records(query)
+    records = pg_hook.get_records(query, parameters=(execution_date,))
     kwargs['ti'].xcom_push(key='aggregated_data', value=records)
 
 def generate_topic_summaries(**kwargs):
@@ -41,7 +41,7 @@ def generate_topic_summaries(**kwargs):
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         
         response = client.chat.completions.create(
-        model="gpt-4",
+        model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": prompt}]
         )
         topic_summary = response.choices[0].message.content.strip()

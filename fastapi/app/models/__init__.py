@@ -4,4 +4,4 @@ from .market_price import MarketPrice
 from .sentiment import RedditSentimentDaily
 from .sp500 import SP500Price
 from .sentiment_topic import TopSentimentTopic
-from .sp500_top_stock import SP500TopStock
+from .Sentiment_Sp500 import SP500_Sentiment

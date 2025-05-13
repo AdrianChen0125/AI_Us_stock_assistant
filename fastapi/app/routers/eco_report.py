@@ -7,7 +7,7 @@ import asyncio
 import re
 import json
 
-router = APIRouter(prefix="/report", tags=["AI Summary Report"])
+router = APIRouter(prefix="/econamic_report", tags=["AI Agent"])
 
 class ReportRequest(BaseModel):
     language: str = "English"

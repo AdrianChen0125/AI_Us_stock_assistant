@@ -37,7 +37,7 @@ def get_top10_per_sector(**kwargs):
     )
     SELECT symbol, company, sector
     FROM ranked
-    WHERE rk <= 10;
+    WHERE rk <= 20;
     """
 
     cursor.execute(query)

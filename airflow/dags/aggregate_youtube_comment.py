@@ -8,6 +8,7 @@ from openai import OpenAI
 def extract_and_aggregate(**kwargs):
     pg_hook = PostgresHook(postgres_conn_id = 'aws_pg')
     execution_date = kwargs['ds']
+
     query = f"""
         SELECT 
             DATE(processed_at) AS topic_date,
@@ -17,12 +18,13 @@ def extract_and_aggregate(**kwargs):
             SUM(CASE WHEN sentiment = 'negative' THEN 1 ELSE 0 END) AS neg_count,
             SUM(CASE WHEN sentiment = 'positive' THEN 1 ELSE 0 END) AS pos_count
         FROM processed_data.youtube_comments
-        WHERE processed_at::date = DATE '{execution_date}'
+        WHERE DATE(processed_at) = Date %s
         GROUP BY topic_date, topic, keywords
         Order by comments_count DESC
         LIMIT 5;
     """
-    records = pg_hook.get_records(query)
+    records = pg_hook.get_records(query, parameters=(execution_date,))
+    print(records)
     kwargs['ti'].xcom_push(key='aggregated_data', value=records)
 
 def generate_topic_summaries(**kwargs):
@@ -59,10 +61,9 @@ def generate_topic_summaries(**kwargs):
 
 def insert_into_table(**kwargs):
     pg_hook = PostgresHook(postgres_conn_id='aws_pg')
-    summaries = kwargs['ti'].xcom_pull(key='summaries')
-
-    execution_date = kwargs['ds']  
-
+    summaries = kwargs['ti'].xcom_pull(key='summaries') 
+    execution_date = kwargs['execution_date'].date()
+    
     insert_query = """
         INSERT INTO processed_data.youtube_topic (
             topic_date, 
