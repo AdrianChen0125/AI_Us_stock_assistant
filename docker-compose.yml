@@ -1,106 +1,121 @@
-  version: '3.8'
+services:
+  # === PostgreSQL Database ===
+  postgres:
+    image: postgres:15
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
 
-  services:
-    postgres:
-      image: postgres:15
-      env_file:
-        - .env
-      ports:
-        - "5432:5432"
-      volumes:
-        - postgres_data:/var/lib/postgresql/data
+  # === Airflow Webserver ===
+  airflow-webserver:
+    build: ./airflow
+    container_name: airflow-webserver
+    depends_on:
+      - postgres
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      - AIRFLOW__WEBSERVER__WEB_SERVER_PORT=8080
+      - AIRFLOW__CORE__FERNET_KEY=pAq1xg4zRQmS6jQy5_dhMcgJzG89EXs3rRR8uYwPPAg=
+      - PYTHONPATH=/opt/airflow/plugins
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./dbt:/opt/airflow/dbt
+      - ~/.dbt:/home/airflow/.dbt
+      - ./airflow/include:/opt/airflow/include
+    command: >
+      bash -c "
+        airflow db migrate &&
+        airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com &&
+        exec airflow webserver
+      "
+    networks:
+      - backend
 
-    airflow-webserver:
-      build: ./airflow
-      container_name: airflow-webserver
-      depends_on:
-        - postgres
-      environment:
-        - AIRFLOW__CORE__EXECUTOR=LocalExecutor
-        - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
-        - AIRFLOW__WEBSERVER__WEB_SERVER_PORT=8080
-        - AIRFLOW__CORE__FERNET_KEY=pAq1xg4zRQmS6jQy5_dhMcgJzG89EXs3rRR8uYwPPAg=
-        - PYTHONPATH=/opt/airflow/plugins
-      env_file:
-        - .env
-      ports:
-        - "8080:8080"
-      volumes:
-        - ./airflow/dags:/opt/airflow/dags
-        - ./airflow/logs:/opt/airflow/logs
-        - ./airflow/plugins:/opt/airflow/plugins
-        - ./dbt:/opt/airflow/dbt
-        - ~/.dbt:/home/airflow/.dbt
-        - ./airflow/include:/opt/airflow/include
-      command: >
-        bash -c "
-          airflow db init &&
-          airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com &&
-          exec airflow webserver
-        "
+  # === Airflow Scheduler ===
+  airflow-scheduler:
+    build: ./airflow
+    container_name: airflow-scheduler
+    depends_on:
+      - airflow-webserver
+      - postgres
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      - AIRFLOW__CORE__FERNET_KEY=pAq1xg4zRQmS6jQy5_dhMcgJzG89EXs3rRR8uYwPPAg=
+      - PYTHONPATH=/opt/airflow/plugins
+    env_file:
+      - .env
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./dbt:/opt/airflow/dbt
+      - ~/.dbt:/home/airflow/.dbt
+      - ./airflow/include:/opt/airflow/include
+    command: >
+      bash -c "exec airflow scheduler"
+    networks:
+      - backend
 
-    airflow-scheduler:
-      build: ./airflow
-      container_name: airflow-scheduler
-      depends_on:
-        - airflow-webserver
-        - postgres
-      environment:
-        - AIRFLOW__CORE__EXECUTOR=LocalExecutor
-        - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
-        - AIRFLOW__CORE__FERNET_KEY=pAq1xg4zRQmS6jQy5_dhMcgJzG89EXs3rRR8uYwPPAg=
-        - PYTHONPATH=/opt/airflow/plugins
-      env_file:
-        - .env
-      volumes:
-        - ./airflow/dags:/opt/airflow/dags
-        - ./airflow/logs:/opt/airflow/logs
-        - ./airflow/plugins:/opt/airflow/plugins
-        - ./dbt:/opt/airflow/dbt
-        - ~/.dbt:/home/airflow/.dbt
-        - ./airflow/include:/opt/airflow/include
+  # === MLflow Tracking Server ===
+  mlflow:
+    build: ./mlflow_pr
+    container_name: mlflow
+    ports:
+      - "5001:5001"
+    environment:
+      BACKEND_STORE_URI: sqlite:///mlflow.db
+      ARTIFACT_ROOT: s3://mlflow-artifacts-adrian
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_DEFAULT_REGION: us-east-1
+      MLFLOW_TRACKING_URI: http://0.0.0.0:5001
+    volumes:
+      - ./mlflow_pr/mlflow.db:/mlflow.db
+    networks:
+      - backend
 
-      command: >
-        bash -c "
-          exec airflow scheduler
-        "
+  # === FastAPI Backend ===
+  fastapi:
+    build: ./fastapi
+    container_name: fastapi
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./fastapi/app:/app
+    networks:
+      - backend
 
-    mlflow:
-      build: ./mlflow_pr
-      container_name: mlflow
-      ports:
-        - "5001:5001"  
-      environment:
-        BACKEND_STORE_URI: sqlite:///mlflow.db
-        ARTIFACT_ROOT: s3://mlflow-artifacts-adrian
-        AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-        AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-        AWS_DEFAULT_REGION: us-east-1
-        MLFLOW_TRACKING_URI: http://0.0.0.0:5001
-      volumes:
-        - ./mlflow_pr/mlflow.db:/mlflow.db
+  # === Gradio App ===
+  gradio:
+    build: ./gradio
+    container_name: gradio
+    env_file:
+      - .env
+    ports:
+      - "7860:7860"
+    volumes:
+      - ./gradio:/app
+    networks:
+      - backend
 
-    fastapi:
-      build: ./fastapi
-      container_name: fastapi
-      env_file:
-        - .env
-      ports:
-        - "8000:8000"
-      volumes:
-        - ./fastapi/app:/app
+volumes:
+  postgres_data:
 
-    gradio:
-      build: ./gradio
-      container_name: gradio
-      env_file:
-        - .env
-      ports:
-        - "7860:7860"
-      volumes:
-        - ./gradio:/app
-
-  volumes:
-    postgres_data:
-
-
+networks:
+  backend:
+    driver: bridge

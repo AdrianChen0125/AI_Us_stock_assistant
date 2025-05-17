@@ -2,6 +2,7 @@
 apache-airflow==2.8.1
 apache-airflow-providers-postgres>=5.0.0
 apache-airflow-providers-http
+apache-airflow-providers-amazon>=6.0.0
 airflow-provider-mlflow==1.1.0
 
 # === External API Clients ===
@@ -29,6 +30,15 @@ bertopic
 hf_xet
 tiktoken>=0.5.1
 nltk
-
-# === Optional (for sentence-transformers used in BERTopic) ===
+langchain
 sentence-transformers
+
+# === News Crawling ===
+lxml[html_clean]
+newspaper3k
+
+# === AWS SDK / Support ===
+boto3
+
+# === PDF Parsing ===
+PyMuPDF

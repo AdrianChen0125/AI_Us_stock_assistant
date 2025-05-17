@@ -96,7 +96,7 @@ with DAG(
     dag_id = "fetch_economic_index",
     default_args = default_args,
     start_date = datetime (2025, 4, 25),
-    schedule_interval = "@weekly",  
+    schedule_interval = "0 5 * * *",  
     catchup = False,
     tags = ["raw", "economic"]
     

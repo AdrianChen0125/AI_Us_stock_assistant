@@ -648,7 +648,6 @@ Maintain a clear and coherent narrative, with logical transitions between sectio
     except Exception as e:
         return f"Error generating overall report: {e}"
 
-
 def get_economic_report(language='English'):
     try:
         res = requests.post("http://fastapi:8000/econamic_report/generate/", json={"language": language})
@@ -1141,5 +1140,8 @@ with gr.Blocks() as demo:
 
 if __name__ == '__main__':
     print("Gradio version in use:", gr.__version__)
-    demo.launch(server_name="0.0.0.0", server_port=7860)
+    demo.launch(
+    server_name="0.0.0.0",
+    server_port=7860,
+    root_path="/gradio"  )
     

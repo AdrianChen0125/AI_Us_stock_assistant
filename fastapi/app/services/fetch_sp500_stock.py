@@ -1,17 +1,16 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from models.sp500 import SP500Price
-import pandas as pd
-from typing import List
+from typing import List, Dict
 
-async def fetch_sp500_service(symbols: List[str], db: AsyncSession) -> pd.DataFrame:
+async def fetch_sp500_service(symbols: List[str], db: AsyncSession) -> List[Dict]:
     max_date_result = await db.execute(
         select(func.max(SP500Price.snapshot_date))
     )
     max_date = max_date_result.scalar()
 
     if not max_date:
-        return pd.DataFrame()
+        return []
 
     stmt = (
         select(SP500Price)
@@ -21,4 +20,12 @@ async def fetch_sp500_service(symbols: List[str], db: AsyncSession) -> pd.DataFr
     result = await db.execute(stmt)
     data = result.scalars().all()
 
-    return pd.DataFrame([row.__dict__ for row in data]) if data else pd.DataFrame()
+    return [
+        {
+            "symbol": row.symbol,
+            "price": row.price,
+            "volume": row.volume,
+            "snapshot_date": row.snapshot_date.isoformat(),
+        }
+        for row in data
+    ] if data else []

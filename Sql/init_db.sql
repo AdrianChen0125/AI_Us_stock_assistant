@@ -168,24 +168,37 @@ ORDER BY
     published_at;
 
 -- rag_docs Schema Tables
+
 CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
-CREATE TABLE rag_docs.documents (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    source TEXT,  -- e.g. 'essay', 'report'
+
+
+-- 新聞原文
+CREATE TABLE IF NOT EXISTS rag_docs.news_articles (
+    id SERIAL PRIMARY KEY,
     title TEXT,
-    full_text TEXT,
-    uploaded_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE TABLE rag_docs.chunks (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    document_id UUID REFERENCES rag_docs.documents(id),
-    chunk_index INTEGER,
     content TEXT,
-    embedding VECTOR(1536),
+    query_keyword TEXT,
+    url TEXT UNIQUE,  -- 建議這裡也順便加上唯一鍵
+    published_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT NOW()
 );
+
+-- 新聞向量表（MiniLM/BGE 型模型用，384 維）
+CREATE TABLE IF NOT EXISTS rag_docs.news_chunks (
+    id SERIAL PRIMARY KEY,
+    article_id INT REFERENCES rag_docs.news_articles(id) ON DELETE CASCADE,
+    chunk_index INTEGER,
+    chunk_text TEXT,
+    embedding VECTOR(384),
+    model_name TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    CONSTRAINT unique_article_chunk UNIQUE(article_id, chunk_index)
+);
+CREATE INDEX ON rag_docs.news_chunks
+USING ivfflat (embedding vector_cosine_ops)
+WITH (lists = 100);
 
 -- Recommended Indexes 
 CREATE INDEX idx_youtube_video_id ON raw_data.youtube_comments(video_id);

@@ -25,6 +25,9 @@ mlflow
 boto3
 # Optional: LLM integrations
 langchain
+langchain-community
 langgraph
+langsmith
 openai
 anthropic
+sentence-transformers
