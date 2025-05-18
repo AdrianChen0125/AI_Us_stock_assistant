@@ -23,7 +23,7 @@ async def fetch_sp500_service(symbols: List[str], db: AsyncSession) -> List[Dict
     return [
         {
             "symbol": row.symbol,
-            "price": row.price,
+            "price": row.previous_close,
             "volume": row.volume,
             "snapshot_date": row.snapshot_date.isoformat(),
         }

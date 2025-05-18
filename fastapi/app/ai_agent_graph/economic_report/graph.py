@@ -3,6 +3,8 @@ from langgraph.channels import LastValue
 from typing import TypedDict,Annotated
 import pandas as pd
 from .nodes import *
+import mlflow
+
 
 class State(TypedDict, total=False):
     econ_df: Annotated[List[Dict[str, Any]], LastValue(List[Dict[str, Any]])]

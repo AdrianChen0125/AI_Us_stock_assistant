@@ -1,7 +1,5 @@
-# prompt.py
 from typing import Dict, Any
 
-# Node to construct the prompt based on user input and stock data
 def build_prompt(state: Dict[str, Any]) -> Dict[str, Any]:
     holdings = state.get("holdings", [])
     recommended = state.get("recommended", [])

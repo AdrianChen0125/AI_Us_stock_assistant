@@ -1,33 +1,54 @@
 # Web framework
 fastapi
 uvicorn[standard]
-gunicorn 
+gunicorn
 
 # Database
 sqlalchemy
 asyncpg
 psycopg2-binary
-
+nest_asyncio
 # Config
 python-dotenv
 pydantic[email]
 
-# HTTP Client
+# HTTP Client & Async
 httpx
 
-# Data
+# Data & ML
 pandas
 scikit-learn
 joblib
 dill
-# MLflow for model loading
 mlflow
+mlflow[langchain]
 boto3
-# Optional: LLM integrations
+
+# LangChain & RAG
 langchain
+langchain-openai
+langchain-core
 langchain-community
 langgraph
 langsmith
 openai
-anthropic
 sentence-transformers
+pgvector
+
+# Auth & Security
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
+
+# CORS & File
+aiofiles
+
+# PDF Parsing (Optional)
+PyMuPDF
+
+# Test (Optional)
+pytest
+
+# external api
+yfinance
+wikipedia

@@ -12,13 +12,12 @@ from datetime import datetime, timedelta
 from datetime import date
 import requests
 from PIL import Image
-from io import BytesIO
+from auth import login
+from chat_bot import call_chatbot_api
+import requests
+import json
+import re
 
-from langchain.agents import initialize_agent, Tool
-from langchain_openai import ChatOpenAI
-from langchain_community.utilities import WikipediaAPIWrapper
-from langchain_community.tools import WikipediaQueryRun
-from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 
 # ---------- Global Variable ----------
 last_generated_report = ""  # Store the latest generated report for email sending
@@ -33,14 +32,6 @@ DB_CONFIG = {
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 API_BASE = "http://fastapi:8000"
-
-
-# langchain
-llm = ChatOpenAI(
-    model="gpt-3.5-turbo",
-    streaming=True, 
-    callbacks=[StreamingStdOutCallbackHandler()],
-    temperature=0.7)
 
 # ---------- Email Sending ----------
 def send_email_report(to_email, subject, report_content):
@@ -79,7 +70,6 @@ def fetch_economic_index_summary(index_name: str = None, days: int = 180):
             return pd.DataFrame(), "No data found"
 
         df = pd.DataFrame(data)
-
         summary = "\n".join([f"{row['date']} | {row['index_name']} | {row['value']}" for row in data])
         return df, summary
 
@@ -328,19 +318,6 @@ def fetch_market_price_last_7_days():
         if conn:
             conn.close()
 
-def search_news_for_keywords(keywords, max_articles=3):
-    NEWS_API_KEY = os.getenv("NEWS_API_KEY")
-    query = " OR ".join(keywords[:5])
-    from_date = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
-    url = f"https://newsapi.org/v2/everything?q={query}&sortBy=publishedAt&from={from_date}&pageSize={max_articles}&apiKey={NEWS_API_KEY}"
-    try:
-        response = requests.get(url, timeout=10)
-        articles = response.json().get("articles", [])
-        if not articles:
-            return "No news found."
-        return "\n\n".join([f"【{a['title']}】\n{a['description']}\nLink: {a['url']}" for a in articles])
-    except Exception as e:
-        return f"News search error: {e}"
 
 # ----------- Save back to DB---------------
 
@@ -576,234 +553,70 @@ def query_stock_data(symbol, sector, start_date, end_date):
 
     except Exception as e:
         return pd.DataFrame([{"錯誤": "查詢失敗", "訊息": str(e)}])
+
 # ---------- Report Generation ----------
 
-def generate_overall_report(
-    economic_summary: str,
-    market_sentiment_summary: str,
-    stock_recommender_summary: str,
-    language: str = "English"
-):
-
+def get_economic_report(language='English', token=None):
     try:
-        if language.lower() in ["chinese", "zh", "中文"]:
-            prompt = f"""請根據以下三份資料，撰寫一份完整的總體經濟與市場觀察分析報告。請以經濟學視角切入，語氣專業嚴謹，適度使用專有名詞並在首次出現時提供簡單解釋；同時須注意用詞清晰，讓一般讀者也能理解。
+        headers = {"Authorization": f"Bearer {token}"} if token else {}
+        payload = {"language": language}
 
-📘 經濟概況報告：
-{economic_summary}
-
-📊 市場情緒報告：
-{market_sentiment_summary}
-
-📈 個股投資建議摘要：
-{stock_recommender_summary}
-
-請將報告組織為以下結構，每段明確針對對應資料內容：
-
-1. **經濟趨勢分析**：概述目前的總體經濟狀況（如 GDP、通膨、利率等），並說明這些指標可能對企業營運與一般消費者產生的實質影響。
-
-2. **市場情緒解讀**：從市場情緒資料中解析投資人當前的反應與風險偏好，並指出目前市場焦點產業與關鍵個股是否反映過度樂觀或謹慎的氛圍。
-
-3. **個股建議評析**：總結 AI 所提出的個股建議內容，說明推薦邏輯是否合理，並從產業分布或風險分散角度補充專業觀點。
-
-4. **整體結論與建議**：綜合上述段落，總結目前可採取的資產配置策略，包含對不同風險屬性的投資人應有的建議（如穩健型、成長型、保守型），並提醒應關注的潛在變數。
-
-字數控制在 600 字以內，語氣專業、條理清晰，避免過度艱澀，但不需過度簡化內容。
-"""
-        else:
-            prompt = f"""Based on the following three reports, generate a well-structured, professional market and economic outlook. The tone should be analytical and objective, incorporating appropriate financial terminology (with brief explanations when needed), but still understandable to a non-technical reader.
-
-📘 Economic Summary:
-{economic_summary}
-
-📊 Market Sentiment Report:
-{market_sentiment_summary}
-
-📈 Stock Recommendation Summary:
-{stock_recommender_summary}
-
-Your report (max ~600 words) should include the following structure:
-
-1. **Macroeconomic Overview**: Summarize the current macroeconomic conditions (e.g., GDP trends, inflation, interest rates) and explain how they may affect businesses and consumer behavior.
-
-2. **Market Sentiment Analysis**: Interpret investor behavior and risk appetite based on sentiment data, highlighting sectors or stocks receiving unusually high attention and whether sentiment appears justified.
-
-3. **Equity Recommendation Review**: Review the AI-generated stock recommendations, explaining the rationale behind them and offering professional insight into sector diversification and potential portfolio impact.
-
-4. **Conclusion and Strategic Suggestions**: Tie together the above sections into a cohesive summary. Offer tailored asset allocation guidance for different risk profiles (e.g., conservative, balanced, aggressive), and note any key risks or indicators to monitor.
-
-Maintain a clear and coherent narrative, with logical transitions between sections. The report should feel like a brief yet insightful investment commentary."""
-
-        res = client.chat.completions.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "You are a senior investment strategist who synthesizes multi-source information."},
-                {"role": "user", "content": prompt}
-            ]
-        )
-
-        report = res.choices[0].message.content
-        return report
-
-    except Exception as e:
-        return f"Error generating overall report: {e}"
-
-def get_economic_report(language='English'):
-    try:
-        res = requests.post("http://fastapi:8000/econamic_report/generate/", json={"language": language})
+        res = requests.post("http://fastapi:8000/AI/economic_report", json=payload, headers=headers)
         res.raise_for_status()
 
-        return res.text, res.text  
-    except Exception as e:
-        print("Error fetching report:", e)
-        return "Failed to fetch report.", None
+        data = res.json()
+        report = data.get("report", "")
 
-def get_market_sentiment_report(language='English'):
-    
+        
+        clean_report = report.strip()
+
+        return clean_report, report  # 一個顯示用、一個原始 markdown 備用
+
+    except Exception as e:
+        print("❌ Error fetching report:", e)
+        return "⚠️ Failed to fetch report.", None
+
+def get_market_sentiment_report(token):
     try:
-        df = fetch_overall_sentiment_summary()
-        _, sentiment_summary = fetch_sentiment_topic_summary()
-        _, top_sector_summary = fetch_top5_sectors_this_week()
-        _, symbol_summary = fetch_top10_symbols_this_week()
-
-        # 建立 prompt（中英切換）
-        if language.lower() in ['chinese', 'zh', '中文']:
-            prompt = f"""
-請根據以下三份美國股市市場情緒資料，撰寫一份深入的市場情緒分析報告。語氣應專業、客觀，內容應幫助一般投資者理解目前市場氣氛，並從中挖掘潛在的投資機會與需關注的主題。
-
-reddit:近30日針對美國股市情緒 {df}
-
-📌 1. 整體市場情緒摘要：
-{sentiment_summary}
-
-📊 2. 本週前五大熱門產業：
-{top_sector_summary}
-
-📈 3. 本週前十熱門股票：
-{symbol_summary}
-
-請撰寫約 400–600 字的分析報告，結構包含以下重點：
-
-1. **市場情緒變化趨勢**：說明投資人情緒是否偏向樂觀、保守或猶豫，並解釋可能的驅動因素。
-
-2. **產業與股票熱度解讀**：分析哪些產業與個股受到特別關注，是否有炒作或過熱跡象，以及這些現象是否可能持續。
-
-3. **資金可能流向與風險提示**：根據熱度資料推測潛在的市場流向，並提醒相關風險，例如短期投機、政策變數或估值泡沫。
-
-4. **關鍵話題推薦**：根據分析內容與前十熱門話題，列出讀者可進一步查詢的具體關鍵字或主題（如：「AI晶片」、「可再生能源補貼」、「聯準會會議紀要」、「半導體庫存」、「大型科技股回購」等）。
-
-5. **投資建議**：用淺白、務實的語言提出應對當前市場情緒的策略建議，例如：分散配置、短線觀望或聚焦基本面等。
-
-請讓報告條理清晰，段落分明，結尾可加入簡短總結或觀察方向。
-"""
-        else:
-            prompt = f"""
-You are a professional market analyst. Based on the following U.S. stock market sentiment data, generate a structured and insightful sentiment analysis report. The tone should be professional yet approachable, helping non-expert investors understand how public mood and discussions are shaping the market.
-
-Reddit sentiment data (past 30 days):
-{df}
-
-📌 1. Overall Sentiment Summary:
-{sentiment_summary}
-
-📊 2. Top 5 Sectors This Week:
-{top_sector_summary}
-
-📈 3. Top 10 Symbols This Week:
-{symbol_summary}
-
-Please organize your analysis into 4–5 clear paragraphs (approx. 400–600 words), covering the following:
-
-1. **Sentiment Trend Overview**: Identify whether current market sentiment appears optimistic, cautious, or divided. Highlight any major shifts or acceleration in discussions.
-
-2. **Sector & Symbol Focus**: Discuss any sectors or companies receiving disproportionate attention. Are there signs of overhype, speculation, or organic momentum?
-
-3. **Emerging Investment Themes**: From the data, extract recurring themes or market narratives (e.g., AI, clean energy, monetary policy). Describe how these are influencing investor perception.
-
-4. **Key Topics to Research**: Based on the top trending topics, suggest a list of specific themes or keywords that investors may want to research further (e.g., "Nvidia AI chips", "renewable subsidies", "Fed policy", "semiconductor inventory").
-
-5. **Practical Recommendations**: Offer simple, actionable guidance on how investors might position themselves based on the current sentiment climate—whether to stay cautious, diversify, or monitor specific trends.
-
-Conclude the report with a concise summary and any forward-looking considerations.
-"""
-        # 呼叫 GPT API
-        res = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are a financial analyst specializing in interpreting market sentiment data."
-                },
-                {"role": "user", "content": prompt}
-            ]
-        )
-
-        report = res.choices[0].message.content
-        print(report) 
-        return report, report
-
+        headers = {"Authorization": f"Bearer {token}"}
+        res = requests.post(f"{API_BASE}/AI/sentiment_report", headers=headers)
+        res.raise_for_status()
+        report = res.json().get("report", "No content")
+        return report, report  
     except Exception as e:
-        return f"Error generating sentiment report: {e}"
+        return f"Error: {e}", None
+   
+def generate_overall_report(user_profile, token):
+    payload = {
+        "language": user_profile.get("language", "English"),
+        "economic_summary": "US GDP growth remained stable in Q1 2024, inflation slightly decreased.",
+        "sentiment_summary": "Investors show cautious optimism, favoring tech and healthcare stocks.",
+        "stock_summary": "AI suggests holding Nvidia, adding Apple, and reducing Tesla positions.",
+        "age": user_profile.get("age", "18-25"),
+        "experience": user_profile.get("experience", "Beginner"),
+        "risk": user_profile.get("risk", "Moderate"),
+    }
+
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
+
+    try:
+        print("Sending payload:", payload)
+        res = requests.post(
+            "http://fastapi:8000/AI/summerise_report",
+            json=payload,
+            headers=headers
+        )
+        res.raise_for_status()
+        return res.json().get("report", "No report generated.")
+    except Exception as e:
+        return f"❌ Error generating report: {e}"
+    
 
 # ----------send email-----------
-
-def update_report_and_return(economic_summary,market_sentiment_summary,stock_recommender_summary,language):
-    return generate_overall_report(economic_summary,market_sentiment_summary,stock_recommender_summary,language)
 
 def send_latest_report(email):
     return send_email_report(email, "Your Personalized Investment Report", last_generated_report)
 
-# ---------- LangChain Agent ----------
-
-news_tool = Tool(name="SearchNews", func=lambda q: search_news_for_keywords([q]), description="search news")
-wiki_tool = WikipediaQueryRun(api_wrapper=WikipediaAPIWrapper(lang="en"))
-
-agent = initialize_agent(
-    [news_tool, 
-    Tool.from_function(wiki_tool, name="Wikipedia", description="search wikipedia")],
-    llm=llm,
-    agent="conversational-react-description",
-    verbose=True,
-    handle_parsing_errors=True  
-)
-
-def convert_to_langchain_chat_history(gradio_history):
-    
-    chat_history = []
-    for msg in gradio_history:
-        if isinstance(msg, dict):
-            role = msg.get("role")
-            content = msg.get("content")
-            if role == "user":
-                chat_history.append(("user", content))
-            elif role == "assistant":
-                chat_history.append(("assistant", content))
-    return chat_history
-
-def continue_chat_with_agent(history, user_input):
-    try:
-        chat_history_lc = convert_to_langchain_chat_history(history)
-
-        agent_reply = agent.invoke({
-            "input": user_input,
-            "chat_history": chat_history_lc
-        })
-
-        if hasattr(agent_reply, "content"):
-            agent_reply = agent_reply.content
-        elif isinstance(agent_reply, dict) and "output" in agent_reply:
-            agent_reply = agent_reply["output"]
-        else:
-            agent_reply = str(agent_reply)
-
-    except Exception as e:
-        agent_reply = f"Agent 錯誤：{e}"
-
-    history = history + [
-        {"role": "user", "content": str(user_input)},
-        {"role": "assistant", "content": str(agent_reply)}
-    ]
-    return history, history, ""
 
 # ---------- dropdown 
 def get_index_list():
@@ -826,6 +639,7 @@ with gr.Blocks() as demo:
     user_state = gr.State() 
 
     with gr.Tabs():
+
         # --- Tab 1: Questionnaire ---
         with gr.Tab(" Main page (首頁) "):
             
@@ -834,73 +648,82 @@ with gr.Blocks() as demo:
                     image_output = gr.Image(show_image("Intro_page.png"),width=900,height=850,type="pil")
                     
                 with gr.Column(scale=1):
-                    gr.Markdown("""
-            ## 💸 Welcome to Your AI U.S. Stock Investment Assistant
+                    gr.Markdown("### 🔐 Login First")
+                    
+                    username = gr.Textbox(label="Username")
+                    password = gr.Textbox(label="Password", type="password")
+                    login_btn = gr.Button("Login")
+                    login_status = gr.Markdown()
+                    access_token = gr.Textbox(visible=False)
+                    
+                    with gr.Column(visible=False) as form_section:
+                        user_profile_state = gr.State()
+                        age = gr.Dropdown(["18-25", "26-35", "36-45", "46-60", "60+"], label="Your Age Group")
+                        experience = gr.Radio(["Beginner", "Intermediate", "Advanced"], value="Intermediate", label="Investment Experience")
+                        interest = gr.CheckboxGroup(["Tech Stocks", "ETF", "High Dividend", "US Bonds", "Crypto"],value="High Dividend",label="Investment Preferences")
+                        sources = gr.Textbox(
+                            label="Stock You Have",
+                            placeholder="e.g., Nvidia, Tesla..."
+                        )
+                        risk = gr.Radio(["Conservative", "Moderate", "Aggressive"], value="Moderate", label="Risk Tolerance")
+                        language = gr.Radio(["English", "chinese"], value="English", label="Language")
+                        email = gr.Textbox(label="Your Email (for report delivery)", placeholder="example@email.com")
+                        submit_btn = gr.Button("Submit")
+                        output = gr.Textbox(label="Submission Status", interactive=False)
 
-            I am Money, your smart investment assistant.I'm here to help you build a smarter U.S. stock strategy.  
-            By understanding your background, experience, and preferences, we can tailor investment recommendations just for you.  
+                    
+                    login_btn.click(
+                        fn=login,
+                        inputs=[username, password],
+                        outputs=[login_status, login_btn, form_section, access_token]
+                    )
 
-            👉 Take a moment to complete the short survey on the right to get started.
-            """)
-                    age = gr.Dropdown(["18-25", "26-35", "36-45", "46-60", "60+"], label="Your Age Group")
-                    experience = gr.Radio(["Beginner", "Intermediate", "Advanced"],value="Intermediate", label="Investment Experience")
-                    interest = gr.CheckboxGroup(
-                        ["Tech Stocks", "ETF", "High Dividend", "US Bonds", "Forex", "Crypto"],value="High Dividend",
-                        label="Investment Preferences"
-                    )
-                    sources = gr.Textbox(
-                        label="Stock or Keywords You Follow",
-                        placeholder="e.g., Nvidia, Tesla......"
-                    )
-                    risk = gr.Radio(["Conservative", "Moderate", "Aggressive"],value="Moderate", label="Risk Tolerance")
-                    language = gr.Radio(["English", "chinese"],  value="English", label = "language")
-                    email = gr.Textbox(label = "Your Email (for report delivery)", placeholder="example@email.com")
-                    submit_btn = gr.Button("Submit")
-                    output = gr.Textbox(label="Submission Status", interactive=False)
 
                     submit_btn.click(
-                        fn = save_to_db,
+                        fn=save_to_db,
                         inputs=[age, experience, interest, sources, risk, language, email],
-                        outputs=[output, user_state]
-                        )
+                        outputs=[output,user_profile_state]
+                    )
+
 
         with gr.Tab(" Economic & Market Trends（經濟與市場趨勢）"):
             with gr.Row():
                  with gr.Column(scale=1):
                     gr.Markdown("## Economic Indicator 經濟指數")
                     
-                    print("Index list:", get_index_list())  # check if this is empty or fails
-                    print("Market list:", get_market_list())
-
                     with gr.Row():
-                        index_dropdown = gr.Dropdown(label="Select Index",choices = get_index_list(),value=None,scale=2)
-                        days_input = gr.Number(label="Days Range",value=180,precision=0,scale=1)
-    
+                        print("Index list:", get_index_list())
+                        index_dropdown = gr.Dropdown(label="Select Index", choices= get_index_list(), value=None, scale=2)
+                        days_input = gr.Number(label="Days Range", value=180, precision=0, scale=1)
+
                     chart_output = gr.Plot()
 
+                    # 移除 token 參數
                     def update_single_chart(index_name, days):
                         if not index_name:
                             return go.Figure().update_layout(title="Please select an index.")
                         df, _ = fetch_economic_index_summary(index_name=index_name, days=int(days))
                         return plot_index_chart(df, title=f"{index_name} Trend")
+
                 
                     index_dropdown.change(
-                        fn=update_single_chart, 
-                        inputs=[index_dropdown, days_input], 
-                        outputs = chart_output,
+                        fn=update_single_chart,
+                        inputs=[index_dropdown, days_input],
+                        outputs=chart_output,
                         queue=True,
-                        )
+                    )
+
                     days_input.change(
-                        fn = update_single_chart, 
-                        inputs = [index_dropdown, days_input],
-                        outputs = chart_output,
+                        fn=update_single_chart,
+                        inputs=[index_dropdown, days_input],
+                        outputs=chart_output,
                         queue=True,
-                        )
+)
 
                  with gr.Column(scale=1):
                     gr.Markdown("## Market Price 市場走勢")
 
-                    market_dropdown = gr.Dropdown(label="Select Market", choices=get_market_list(), value=None)
+                    market_dropdown = gr.Dropdown(label="Select Market", choices = get_market_list(), value=None)
                     market_chart_output = gr.Plot()
                     
                     def update_market_chart(market):
@@ -921,7 +744,7 @@ with gr.Blocks() as demo:
             
             generate_btn.click(
             fn=get_economic_report,
-            inputs=[language],
+            inputs=[language,access_token],
             outputs=[ai_generated_report,economic_report_state]
         )
             
@@ -967,6 +790,11 @@ with gr.Blocks() as demo:
                     chart_output = gr.Plot(label="Weekly Top 5 Sector")
                     last_time_text = gr.Markdown()
                     refresh_btn1 = gr.Button("🔄 Refresh")
+
+                    refresh_btn1.click(
+                    fn= plot_sector_chart,
+                    outputs= chart_output
+                )
                 
                 with gr.Column(scale=1):
                     gr.Markdown(" ### Top 10 Stock Discussions (熱門標地) ")    
@@ -992,15 +820,12 @@ with gr.Blocks() as demo:
 
             
             sentiment_report_generate_btn.click(
-            fn = get_market_sentiment_report,
-            inputs = [language],
-            outputs = [ai_sentiment_report,sentiment_report_state]
+                fn=get_market_sentiment_report,
+                inputs=[access_token],
+                outputs=[ai_sentiment_report, sentiment_report_state]
             )
 
-            refresh_btn1.click(
-                fn= plot_sector_chart,
-                outputs= chart_output
-            )
+            
            
             
             chart_btn.click(
@@ -1055,25 +880,28 @@ with gr.Blocks() as demo:
             stock_recommendation_state = gr.State()
             analyze_button = gr.Button("分析推薦")
 
-            def call_ai_analysis(holdings, recommended, style, risk):
+            def call_ai_analysis(holdings, recommended, user_profile, token):
                 payload = {
                     "holdings": [s.strip() for s in holdings.split(",") if s.strip()],
                     "recommended": [s.strip() for s in recommended.split(",") if s.strip()],
-                    "style_preference":style,
-                    "risk_tolerance": risk
+                    "style_preference": user_profile.get("interest", []),
+                    "risk_tolerance": user_profile.get("risk", "Moderate")
                 }
+
+                headers = {"Authorization": f"Bearer {token}"} if token else {}
+
                 try:
-                    res = requests.post("http://fastapi:8000/ai/stock_recommender", json=payload)
+                    res = requests.post("http://fastapi:8000/AI/stock_recommendation", json=payload, headers=headers)
                     res.raise_for_status()
                     result = res.json()["analysis"]
-                    return "\n\n".join(result.split("\n\n")) ,result
+                    return "\n\n".join(result.split("\n\n")), result
                 except Exception as e:
-                    return f"❌ Error: {str(e)}"
+                    return f"❌ Error: {str(e)}", ""
 
             analyze_button.click(
                 fn=call_ai_analysis,
-                inputs=[holdings_input, recommended_input, interest, risk],
-                outputs=[ai_output,stock_recommendation_state]
+                inputs=[sources, recommended_input, user_profile_state, access_token],
+                outputs=[ai_output, stock_recommendation_state]
             )
             
             gr.Markdown("### 📊 S&P 500 Stock Data")
@@ -1093,22 +921,33 @@ with gr.Blocks() as demo:
                 outputs=output
             )
 
-        with gr.Tab("📄 View Report"):
-                
-            output_text = gr.TextArea(label="📄 Report Content", lines=20) 
-            send_status = gr.Textbox(label="📬 Email Status", interactive=False)
-
+        with gr.Tab(" View Report"):
             with gr.Row():
-                submit_btn = gr.Button("📝 Generate Report")
-                send_btn = gr.Button("📤 Send Report via Email")
+                with gr.Column(scale=2): 
+                    output_text = gr.TextArea(label=" Report Content", lines=20) 
+                    send_status = gr.Textbox(label=" Email Status", interactive=False)
 
-            with gr.Row():  
-                with gr.Column(scale=2):
-                    chatbox = gr.Chatbot(type="messages")
                     with gr.Row():
-                        msg_input = gr.Textbox(placeholder="輸入你的問題", label="問題")
-                        state = gr.State([]
-                                         )
+                        submit_btn = gr.Button(" Generate Report")
+                        send_btn = gr.Button(" Send Report via Email")
+
+                                    
+                        submit_btn.click(
+                            fn=generate_overall_report,
+                            inputs=[
+                                
+                                user_profile_state,
+                                access_token 
+                            ],
+                            outputs=output_text
+                        )
+                        
+                        send_btn.click(
+                        fn=send_latest_report,
+                        inputs=email,
+                        outputs=send_status
+                        )
+  
                 with gr.Column(scale=1):
                     image_output = gr.Image(
                         value=show_image("fin_page.png"), 
@@ -1117,26 +956,19 @@ with gr.Blocks() as demo:
                         type="pil"
                     )
 
-                    
-            # Function bindings
-            
-            submit_btn.click(
-                fn = update_report_and_return,
-                inputs=[economic_report_state,sentiment_report_state,stock_recommendation_state,language],
-                outputs=output_text
-            )
+        with gr.Tab("華爾街Small Talk "):
+            chatbox = gr.Chatbot(label="AI Assistant", type="messages")
+            msg_input = gr.Textbox(placeholder="輸入你的問題", label="問題")
+            state = gr.State([])
+            chat_btn = gr.Button("送出")
 
-            send_btn.click(
-                fn=send_latest_report,
-                inputs=email,
-                outputs=send_status
-            )
-
-            msg_input.submit(
-                fn=continue_chat_with_agent,
-                inputs=[state, msg_input],  
-                outputs=[chatbox, state, msg_input]
-            )
+            chat_btn.click(
+                fn=call_chatbot_api,
+                inputs=[msg_input, state, access_token],
+                outputs=[chatbox, state],
+                scroll_to_output=True
+                )
+        
 
 if __name__ == '__main__':
     print("Gradio version in use:", gr.__version__)

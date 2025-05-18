@@ -19,9 +19,21 @@ from routers import AI_agent_recommendation
 from routers import AI_agent_economic_report
 from routers import AI_agent_market_sentiment_report
 from routers import AI_agent_rag
+from routers import AI_agent_chat_bot
+from routers import AI_agent_summerizer
 
-# Initialize app
+# Auth
+from routers import auth
+
+from middlewares.auth_middleware import AuthMiddleware
+
+import mlflow
+
+# === Initialize FastAPI ===
 app = FastAPI()
+
+# Add Auth Middleware
+app.add_middleware(AuthMiddleware)
 
 # CORS Configuration
 app.add_middleware(
@@ -32,29 +44,55 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# -------------------------------
-# Routers
-# -------------------------------
+# track AI agent
+def setup_experiment(name: str):
+    mlflow.set_tracking_uri("http://mlflow:5001")
+    mlflow.langchain.autolog()
 
-# User Management
+# === Routers ===
+app.include_router(auth.router)
 app.include_router(user_profiles.router)
-
-# Economic Data
 app.include_router(economic_index.router)
 app.include_router(market_price.router)
-
-# Stock Information
 app.include_router(stock_recommend.router)
 app.include_router(sp500.router)
-
-# Market Sentiment
 app.include_router(Sentiment_Reddit.router)
 app.include_router(Sentiment_Topic.router)
 app.include_router(Sentiment_Sp500_Top.router)
 app.include_router(Sentiment_Sp500_Sector.router)
-
-# AI-Generated Reports
 app.include_router(AI_agent_recommendation.router)
 app.include_router(AI_agent_economic_report.router)
 app.include_router(AI_agent_market_sentiment_report.router)
 app.include_router(AI_agent_rag.router)
+app.include_router(AI_agent_chat_bot.router)
+app.include_router(AI_agent_summerizer.router)
+
+# === Add Bearer Auth to OpenAPI ===
+from fastapi.openapi.utils import get_openapi
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    openapi_schema = get_openapi(
+        title="AI Assistant API",
+        version="1.0.0",
+        description="API with JWT authentication via Bearer token",
+        routes=app.routes,
+    )
+    openapi_schema["components"]["securitySchemes"] = {
+        "BearerAuth": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT"
+        }
+    }
+
+    for path in openapi_schema["paths"].values():
+        for method in path.values():
+            method.setdefault("security", [{"BearerAuth": []}])
+
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+app.openapi = custom_openapi

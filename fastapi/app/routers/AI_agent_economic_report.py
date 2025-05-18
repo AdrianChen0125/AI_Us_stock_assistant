@@ -6,7 +6,11 @@ import logging
 import traceback
 from typing import List
 
-router = APIRouter(tags=["AI Agent"])
+def set_experiment(name: str):
+    import mlflow
+    mlflow.set_experiment(name)
+
+router = APIRouter(prefix="/AI",tags=["AI Agent"])
 logger = logging.getLogger(__name__)
 
 class ReportRequest(BaseModel):
@@ -39,6 +43,7 @@ def split_report_sections(response: dict) -> List[str]:
 @router.post("/economic_report/")
 async def generate_report(request: ReportRequest):
     try:
+        set_experiment("economic_report_v1")
         graph = get_graph()
         result = await graph.ainvoke({"language": request.language})
 
