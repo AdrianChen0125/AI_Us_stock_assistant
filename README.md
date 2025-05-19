@@ -1,5 +1,5 @@
 # Overall Structure 
-<img width="798" alt="Screenshot 2025-04-19 at 11 33 58 am copy" src="https://github.com/user-attachments/assets/e74711a2-1ca5-4db1-bb8d-38f283f45085" />
+<img width="878" alt="Screenshot 2025-05-19 at 9 03 03 am" src="https://github.com/user-attachments/assets/34fbeb63-c9cd-4bba-b954-82b55b597d6a" />
 
 
 # AI US Stock investment assitant 
