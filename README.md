@@ -1,70 +1,85 @@
 # Overall Structure 
 <img width="798" alt="Screenshot 2025-04-19 at 11 33 58 am copy" src="https://github.com/user-attachments/assets/e74711a2-1ca5-4db1-bb8d-38f283f45085" />
 
-# 📊 US Stock Sentiment & Economic Intelligence Platform
 
-> **Collect stock-related comments + real economic indicators → Generate personalized reports → Explore deeper insights via AI chatbot.**
+# AI US Stock investment assitant 
 
----
-
-## ✨ Project Overview
-
-This project builds a full data-driven AI system that collects user-generated comments related to **US stocks** and combines them with **real-world economic indexes** to generate personalized financial reports for users.  
-Users can also interact further with an **AI chatbot** to explore deeper financial insights.
+This is an end-to-end AI-driven platform that integrates US stock sentiment, macroeconomic indicators, and retrieval-augmented generation (RAG) to provide personalised financial insights. It combines data engineering, NLP, and interactive interfaces for users.
 
 ---
 
-## 🏗 Architecture
+## Overview
 
-- **Data Sources**:
-  - Scrapes comments from **YouTube**, **Reddit**, and document uploads.
-  - Pulls economic data from external APIs (e.g., News API).
-
-- **ETL Layer**:
-  - **Apache Airflow** schedules and orchestrates ETL tasks.
-  - **Hugging Face** models for text enrichment and sentiment analysis.
-  - **PostgreSQL** (Amazon RDS) for raw, processed, and production data storage.
-  - **dbt** models and transforms data for final production tables.
-
-- **Implementation Layer**:
-  - **Gradio** web interface for interactive user reports.
-  - **LangChain** integrates database with OpenAI, Wikipedia, and News APIs.
-  - **BI Report** generation using transformed datasets.
-
-- **Deployment**:
-  - Fully containerized with **Docker**.
-  - Runs locally on **Mac** or any Docker-supported environment.
+- Collects social commentary and economic data related to US markets
+- Applies NLP models to classify sentiment and summarise discussions
+- Generates BI-style reports and enables real-time interaction via a conversational AI agent
+- Supports agent workflow traceability to enhance transparency and explainability
 
 ---
 
-## 🚀 Key Features
+## Architecture
 
-- 🛠 Collects and classifies US stock-related comments.
-- 📈 Merges sentiment data with real economic indicators.
-- 📝 Generates customized financial reports.
-- 🤖 AI chatbot allows users to explore stock sentiment, news, and market trends.
-- 🔗 Supports integration with OpenAI, Wikipedia, News APIs.
+### Data Layer
+
+- Sources: YouTube, Reddit, and document uploads
+- data stored in PostgreSQL  (Amazon RDS)
+- Sentiment classification and embedding via Hugging Face models
+
+### ELT Layer
+
+- Apache Airflow handles batch ETL pipelines and model inference
+- dbt transforms data across raw, processed, and production layers
+
+### Backend
+
+- FastAPI serves the core API and model endpoints
+- LangGraph manages multi-step agent workflows for decision traceability
+- MLflow stores model versions, metrics, and artefacts in S3
+- RAG-based AI assistant performs document retrieval and LLM-based response generation
+
+### Frontend
+
+- Built using Gradio
+- Provides:
+  - Interactive chatbot powered by LangGraph + RAG
+  - BI report viewer for summarised sentiment and economic analysis
+  - Agent workflow viewer for debugging and traceability
 
 ---
 
-## 🛠 Technologies Used
+## Features
 
-| Technology | Purpose |
-|:----------|:--------|
-| Apache Airflow | ETL orchestration |
-| Hugging Face Transformers | NLP sentiment analysis |
-| PostgreSQL (Amazon RDS) | Data storage |
-| dbt | Data transformation |
-| Gradio | Frontend web app |
-| LangChain | AI integration |
-| Docker | Containerization and deployment |
+- Social sentiment analysis for stock-related content
+- Economic data integration (e.g., inflation, rates, GDP)
+- Retrieval-augmented AI assistant for market Q&A
+- BI report generation per user or query scope
+- Agent workflow trace with LangGraph for explainable AI logic
+- Fully containerised deployment
 
 ---
 
-## 📦 Getting Started
+## Technology Stack
 
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/your-username/your-repo-name.git
-   cd your-repo-name
+| Tool / Framework        | Purpose                                  |
+|-------------------------|------------------------------------------|
+| Apache Airflow          | ETL orchestration                        |
+| Hugging Face            | NLP and sentiment modelling              |
+| PostgreSQL (Amazon RDS) | Structured data storage                  |
+| dbt                     | Data transformation                      |
+| FastAPI                 | Backend services                         |
+| LangGraph               | Agent orchestration                      |
+| MLflow + S3             | Model tracking and storage               |
+| RAG (LLM + Retrieval)   | AI assistant with contextual answers     |
+| Gradio                  | Frontend UI                              |
+| Docker                  | Deployment and environment management    |
+
+---
+
+## Getting Started
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/your-username/your-repo.git
+cd your-repo
     
