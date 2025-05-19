@@ -4,7 +4,7 @@
 
 # AI US Stock investment assitant 
 
-This is an end-to-end AI-driven platform that integrates US stock sentiment, macroeconomic indicators, and retrieval-augmented generation (RAG) to provide personalised financial insights. It combines data engineering, NLP, and interactive interfaces for users.
+This is an end-to-end AI-driven platform that integrates US stock sentiment, macroeconomic indicators, and retrieval-augmented generation (RAG) to provide personalised financial insights. It combines data engineering, NLP, and interactive interfaces for investor.
 
 ---
 
