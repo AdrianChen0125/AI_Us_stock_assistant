@@ -29,6 +29,7 @@ def set_experiment(name: str):
 async def generate_ai_report(req: ReportRequest):
     try:
         set_experiment("summerise_report_v1")
+
         state: AgentState = {
             "language": req.language,
             "economic_summary": req.economic_summary,
@@ -39,7 +40,6 @@ async def generate_ai_report(req: ReportRequest):
                 "experience": req.experience,
                 "risk": req.risk
             },
-            "translated_inputs": {},
             "report": ""
         }
 

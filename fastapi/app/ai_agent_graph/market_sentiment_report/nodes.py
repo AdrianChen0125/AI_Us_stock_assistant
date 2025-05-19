@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 
-# 初始化模型（記得用 with_config 設定 span 名稱）
+
 llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.7).with_config({
     "run_name": "generate_sentiment_report"
 })

@@ -1,31 +1,37 @@
 from openai import OpenAI
 import os
 
-# 初始化 OpenAI 客戶端，使用環境變數中的 API 金鑰
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# 語言別名映射
+LANGUAGE_MAP = {
+    "chinese": "zh",
+    "zh": "zh",
+    "zh-hant": "zh",
+    "中文": "zh",
+    "english": "en",
+    "en": "en"
+}
 
 def translate_text(text: str, target_lang: str = "zh") -> str:
     """
-    使用 OpenAI GPT 模型翻譯輸入文字為指定語言。
-    
-    參數：
-    - text: 要翻譯的文字
-    - target_lang: 目標語言代碼（"zh" 表示中文，"en" 表示英文）
-
-    回傳：
-    - 翻譯後的文字（或錯誤訊息）
+    使用 OpenAI GPT 模型翻譯文字為指定語言。
+    支援的目標語言：zh（繁體中文）、en（英文）
     """
-    # 定義系統提示語（可依語言擴充）
-    lang_map = {
+    normalized_lang = target_lang.strip().lower()
+    lang_code = LANGUAGE_MAP.get(normalized_lang)
+
+    if lang_code not in ["zh", "en"]:
+        return f"[Translation Error: Unsupported language '{target_lang}']"
+
+    prompts = {
         "zh": "請將以下內容翻譯成繁體中文：",
         "en": "Please translate the following into English:"
     }
 
-    # 取對應語言的提示，找不到則預設英文
-    system_prompt = lang_map.get(target_lang, "Translate the following:")
+    system_prompt = prompts[lang_code]
 
     try:
-        # 發送翻譯請求給 OpenAI
         res = client.chat.completions.create(
             model="gpt-4",
             messages=[
@@ -33,8 +39,6 @@ def translate_text(text: str, target_lang: str = "zh") -> str:
                 {"role": "user", "content": text}
             ]
         )
-        # 回傳翻譯結果（去除首尾空白）
         return res.choices[0].message.content.strip()
     except Exception as e:
-        # 發生錯誤時回傳錯誤訊息
         return f"[Translation Error: {str(e)}]"

@@ -10,8 +10,6 @@ from .nodes import (
     generate_sentiment_report
 )
 
-
-
 class MarketState(TypedDict, total=False):
     reddit_df: str
     sentiment_summary: str

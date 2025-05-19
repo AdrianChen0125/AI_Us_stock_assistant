@@ -7,16 +7,12 @@ import gradio as gr
 import psycopg2
 import pandas as pd
 import plotly.graph_objects as go
-from openai import OpenAI
-from datetime import datetime, timedelta
 from datetime import date
 import requests
 from PIL import Image
 from auth import login
 from chat_bot import call_chatbot_api
 import requests
-import json
-import re
 
 
 # ---------- Global Variable ----------
@@ -28,8 +24,6 @@ DB_CONFIG = {
     "dbname": os.environ.get("DB_NAME"),
     "user": os.environ.get("DB_USER"),
     "password": os.environ.get("DB_PASSWORD")}
-
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 API_BASE = "http://fastapi:8000"
 
@@ -586,12 +580,12 @@ def get_market_sentiment_report(token):
     except Exception as e:
         return f"Error: {e}", None
    
-def generate_overall_report(user_profile, token):
+def generate_overall_report(economic_report,sentiment_report,recommedation_report,user_profile, token):
     payload = {
         "language": user_profile.get("language", "English"),
-        "economic_summary": "US GDP growth remained stable in Q1 2024, inflation slightly decreased.",
-        "sentiment_summary": "Investors show cautious optimism, favoring tech and healthcare stocks.",
-        "stock_summary": "AI suggests holding Nvidia, adding Apple, and reducing Tesla positions.",
+        "economic_summary": economic_report,
+        "sentiment_summary": sentiment_report,
+        "stock_summary": recommedation_report,
         "age": user_profile.get("age", "18-25"),
         "experience": user_profile.get("experience", "Beginner"),
         "risk": user_profile.get("risk", "Moderate"),
@@ -935,7 +929,9 @@ with gr.Blocks() as demo:
                         submit_btn.click(
                             fn=generate_overall_report,
                             inputs=[
-                                
+                                economic_report_state,
+                                sentiment_report_state,
+                                stock_recommendation_state,
                                 user_profile_state,
                                 access_token 
                             ],
