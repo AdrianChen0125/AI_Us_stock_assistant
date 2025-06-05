@@ -1,6 +1,8 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.operators.dagrun_operator import TriggerDagRunOperator
+
 from psycopg2.extras import execute_values
 from datetime import datetime, timedelta
 import re, os
@@ -197,9 +199,27 @@ with DAG(
     
 ) as dag:
 
-    t1 = PythonOperator(task_id="fetch_recent_comments", python_callable=fetch_recent_comments)
-    t2 = PythonOperator(task_id="clean_texts", python_callable=clean_texts)
-    t3 = PythonOperator(task_id="run_bertopic", python_callable=run_bertopic)
-    t4 = PythonOperator(task_id="save_processed_comments", python_callable=save_processed_comments)
+    t1 = PythonOperator(
+        task_id="fetch_recent_comments",
+        python_callable=fetch_recent_comments)
 
-    t1 >> t2 >> t3 >> t4
+    t2 = PythonOperator(
+        task_id="clean_texts", 
+        python_callable=clean_texts
+        )
+    t3 = PythonOperator(
+        task_id="run_bertopic",
+        python_callable=run_bertopic
+        )
+    t4 = PythonOperator(
+        task_id="save_processed_comments",
+         python_callable=save_processed_comments
+         )
+
+    trigger_summary = TriggerDagRunOperator(
+        task_id='trigger_youtube_topic_summary',
+        trigger_dag_id='youtube_topic_summary',
+        wait_for_completion=False,
+    )
+
+    t1 >> t2 >> t3 >> t4 >> trigger_summary 

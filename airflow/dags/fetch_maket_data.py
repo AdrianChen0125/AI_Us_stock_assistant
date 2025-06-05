@@ -91,7 +91,7 @@ with DAG(
     dag_id = "fetch_market_data",
     default_args = default_args,
     start_date = datetime(2025, 4, 1),
-    schedule_interval = "0 5 * * *",
+    schedule_interval = "@daily",
     catchup = False, 
     tags = ["raw", "crypto", "bonds", "indexes"]
 

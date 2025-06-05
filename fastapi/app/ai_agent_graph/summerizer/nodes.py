@@ -41,11 +41,9 @@ def translate_service(state: AgentState) -> AgentState:
     target_lang = state["language"]
     original_report = state["report"]
 
-    print("🈶 翻譯啟動！原始報告前 50 字：", state["report"][:50])
-
     # 呼叫翻譯服務
     translated_report = translate_text(original_report, target_lang)
-    print("🈯 翻譯完成！前 50 字：", translated_report[:50])
+   
 
     # 回傳新的 state，覆蓋原本 report 為翻譯後版本
     return {**state, "report": translated_report}

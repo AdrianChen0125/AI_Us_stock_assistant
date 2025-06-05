@@ -100,7 +100,7 @@ default_args = {
 with DAG(
     dag_id = 'reddit_topic_summary',
     default_args = default_args,
-    schedule_interval = '0 5 * * 6',
+    schedule_interval = None,
     catchup = False,
     tags = ['processed','reddit']
 )as dag:

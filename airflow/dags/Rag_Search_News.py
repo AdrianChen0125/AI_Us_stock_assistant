@@ -25,11 +25,11 @@ default_args = {
 }
 
 dag = DAG(
-    dag_id="Rag_Search_News",
-    default_args=default_args,
-    start_date=datetime(2025, 5, 16),
-    schedule_interval="0 6 * * 6",  # 每週六早上 6:00
-    catchup=False,
+    dag_id = "Rag_Search_News",
+    default_args = default_args,
+    start_date = datetime(2025, 5, 16),
+    schedule_interval = None,
+    catchup = False,
 )
 
 # --- Task 1: Fetch keywords ---

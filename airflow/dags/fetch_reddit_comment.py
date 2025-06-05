@@ -163,6 +163,7 @@ with DAG(
     dag_id = "fetch_reddit_comment",
     default_args = default_args,
     start_date = datetime(2025, 4, 24),
+    max_active_runs = 1,
     schedule_interval = "@daily",
     catchup = False,
     tags = ["raw", "reddit", "us_stock"]

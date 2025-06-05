@@ -1,10 +1,14 @@
 from pydantic import BaseModel
+from typing import List
+
+class ContextChunk(BaseModel):
+    chunk_text: str
+    url: str
 
 class QuestionRequest(BaseModel):
     question: str
     top_k: int = 3
 
-class RAGResponse(BaseModel):
+class RAGOnlyContextResponse(BaseModel):
     question: str
-    answer: str
-    context_used: list[str]
+    context_used: List[ContextChunk]

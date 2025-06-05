@@ -52,3 +52,6 @@ pytest
 # external api
 yfinance
 wikipedia
+
+# recommender
+lightfm

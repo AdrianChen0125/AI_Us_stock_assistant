@@ -89,13 +89,21 @@ CREATE TABLE IF NOT EXISTS raw_data.economic_indicators (
 CREATE TABLE IF NOT EXISTS raw_data.user_profiles (
     id SERIAL PRIMARY KEY,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    age TEXT,
-    experience TEXT,
-    interest TEXT[],       
-    sources TEXT,     
     risk TEXT,
+    interest TEXT[],       
+    holdings TEXT,     
     language TEXT,
     email TEXT UNIQUE         
+);
+-- etoro data
+
+CREATE TABLE IF NOT EXISTS raw_data.etoro_investors (
+    username TEXT PRIMARY KEY,
+    risk INTEGER,
+    copiers INTEGER,
+    revenue FLOAT,
+    country TEXT,
+    risk_level TEXT
 );
 
 -- processed_data Schema Tables 

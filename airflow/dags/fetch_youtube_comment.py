@@ -218,6 +218,7 @@ with DAG(
     dag_id = "fetch_youtube_comment",
     default_args = default_args,
     start_date = datetime(2025, 4, 24),
+    max_active_runs = 1,
     schedule_interval = "0 0 * * 6",
     catchup = False,
     tags=["raw", "youtube", "us stocks"],

@@ -12,7 +12,8 @@ with DAG(
     dag_id="dbt_us_stock",
     default_args=default_args,
     start_date=datetime(2025, 4, 24),
-    schedule_interval="0 5 * * *",
+    schedule_interval="@weekly",
+    max_active_runs=1,
     catchup=False,
     tags=["dbt", "docker"]
 ) as dag:

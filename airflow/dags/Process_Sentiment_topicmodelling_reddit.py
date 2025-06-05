@@ -1,6 +1,7 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.operators.dagrun_operator import TriggerDagRunOperator
 from psycopg2.extras import execute_values
 from datetime import datetime, timedelta
 import re, os, random
@@ -163,6 +164,7 @@ def save_processed_comments(**kwargs):
     cursor.close()
     conn.close()
 
+
 default_args = {
     "owner": "DE_Adrian",
     "retries": 1,
@@ -173,7 +175,7 @@ with DAG(
     dag_id = "Process_Sentiment_topicmodelling_reddit",
     default_args = default_args,
     start_date = datetime(2025, 4, 24),
-    schedule_interval = "0 5 * * 6",  
+    schedule_interval = "0 2 * * 6",  
     catchup = False,
     max_active_runs = 1,
     dagrun_timeout = timedelta(minutes=60),
@@ -199,4 +201,10 @@ with DAG(
         python_callable = save_processed_comments
         )
 
-    t1 >> t2 >> t3 >> t4
+    trigger_summary = TriggerDagRunOperator(
+        task_id='trigger_reddit_topic_summary',
+        trigger_dag_id='reddit_topic_summary',
+        wait_for_completion=False,
+    )
+
+    t1 >> t2 >> t3 >> t4 >> trigger_summary

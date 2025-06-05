@@ -199,6 +199,7 @@ with DAG(
     dag_id = "fetch_reddit_comment_sp500_top10_by_sector",
     default_args = default_args,
     start_date = datetime(2025, 4, 14),
+    max_active_runs = 1,
     schedule_interval = "@daily",
     catchup =False,
     tags = ["raw", "reddit","sp500"]

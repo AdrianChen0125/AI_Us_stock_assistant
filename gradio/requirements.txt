@@ -9,10 +9,13 @@ langchain
 langgraph
 langchain-community
 langchain-openai
-wikipedia
 
 # Data processing & visualization
 pandas
 matplotlib
 plotly
 pillow
+
+# api requests
+httpx
+asyncio

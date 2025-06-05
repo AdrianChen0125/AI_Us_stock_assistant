@@ -1,77 +1,71 @@
+import time
+import os
 import psycopg2
 import pandas as pd
-import os
+from datetime import date
+import requests
 
 DB_CONFIG = {
-    "dbname": os.getenv("DB_NAME"),
-    "user": os.getenv("DB_USER"),
-    "password": os.getenv("DB_PASSWORD"),
-    "host": os.getenv("DB_HOST"),
-    "port": os.getenv("DB_PORT"),
-}
+    "host": os.environ.get("DB_HOST"),
+    "port": os.environ.get("DB_PORT"),
+    "dbname": os.environ.get("DB_NAME"),
+    "user": os.environ.get("DB_USER"),
+    "password": os.environ.get("DB_PASSWORD")}
 
-def fetch_economic_index_summary():
-    conn, cursor = None, None
-    try:
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT 
-            month_date, 
-            series_id, 
-            current_month_value
-            FROM dbt_us_stock_data_production.economic_index
-            WHERE month_date >= NOW()::date - INTERVAL '1 year'
-            ORDER BY series_id, month_date;
-        """)
-        rows = cursor.fetchall()
-        if not rows:
-            return pd.DataFrame(), "No data found"
-        
-        df = pd.DataFrame(rows, columns=["date", "index_name", "value"])
-        
-        summary = "\n".join([f"{r[0]} | {r[1]} | {r[2]}" for r in rows])
-        return df,summary
-    
-    except Exception as e:
-        return pd.DataFrame(), f"Database error: {e}"
-    finally:
-        if cursor: cursor.close()
-        if conn: conn.close()
+API_BASE = "http://fastapi:8000"
 
-def fetch_market_price_summary():
-    conn, cursor = None, None
+# ----- Market data ------
+
+
+def fetch_economic_index_summary(index_name: str = None, days: int = 180):
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT snapshot_time, market, price, ma_3_days, ma_5_days, ma_7_days
-            FROM dbt_us_stock_data_production.market_price
-            WHERE snapshot_time >= (CURRENT_DATE - INTERVAL '1 month')
-            ORDER BY market, snapshot_time;
-        """)
-        rows = cursor.fetchall()
-        
-        if not rows:
+        params = {"days": days}
+        if index_name:
+            params["index_name"] = index_name
+
+        response = requests.get(f"{API_BASE}/economic_index", params=params)
+        response.raise_for_status()
+        data = response.json()
+
+        if not data:
             return pd.DataFrame(), "No data found"
-        
-        df = pd.DataFrame(rows, columns=["date", "market", "price", "ma_3_days", "ma_5_days", "ma_7_days"])
-        
-        summary = "\n".join([
-            f"{date} | {market} | Price: {price} | MA(3): {ma3} | MA(5): {ma5} | MA(7): {ma7}"
-            for date, market, price, ma3, ma5, ma7 in rows
-        ])
-        
+
+        df = pd.DataFrame(data)
+        summary = "\n".join([f"{row['date']} | {row['index_name']} | {row['value']}" for row in data])
         return df, summary
-    
+
     except Exception as e:
-        return pd.DataFrame(), f"Database error: {e}"
+        print("API ERROR:", e)
+        return pd.DataFrame(), f"API error: {e}"
     
-    finally:
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
+def fetch_market_price_summary(market):
+    try:
+        res = requests.get(
+            f"{API_BASE}/market_price", 
+            params={"market": market}
+        )
+        res.raise_for_status()
+        data = res.json()
+
+        if not data:
+            return pd.DataFrame(), "No data"
+
+        df = pd.DataFrame(data)
+        df["date"] = pd.to_datetime(df["date"])
+
+        df = df[["date", "market", "price"]]
+
+        summary = "\n".join([
+            f"{row['date'].date()} | {row['market']} | Price: {row['price']}"
+            for _, row in df.iterrows()
+        ])
+
+        return df, summary
+
+    except Exception as e:
+        print("API error:", e)
+        return pd.DataFrame(), f"API error: {e}"
+        return pd.DataFrame(), f"API error: {e}"
 
 def fetch_market_price_last_7_days():
     conn, cursor = None, None
@@ -118,29 +112,50 @@ def fetch_market_price_last_7_days():
             cursor.close()
         if conn:
             conn.close()
-            
-def fetch_overall_sentiment_summary():
-    conn, cursor = None, None
-    try:
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT 
-            topic_date, 
-            pos_count,
-            neg_count
-            FROM dbt_us_stock_data_production.reddit_comment_us_market_daily
-        """)
-        rows = cursor.fetchall()
-        return pd.DataFrame(rows, columns=["published_at", "total_pc", "total_nc"])
-    except Exception as e:
-        return pd.DataFrame([{"error": str(e)}])
-    finally:
-        if cursor: cursor.close()
-        if conn: conn.close()
 
+def get_index_list():
+                try:
+                    res = requests.get(f"{API_BASE}/economic_index/list")
+                    return res.json() if res.status_code == 200 else []
+                except Exception as e:
+                    print("Error loading index list:", e)
+                    return []
+def get_market_list():
+    try:
+        res = requests.get(f"{API_BASE}/market_price/list")
+        return res.json() if res.status_code == 200 else []
+    except Exception as e:
+        print("Market list error:", e)
+        return []
+# ----- Sentiment data ------
+
+def fetch_sentiment_data():
+    try:
+        res = requests.get(f"{API_BASE}/sentiment/reddit_summary/compare")
+        res.raise_for_status()
+        data = res.json()
+
+        df = pd.DataFrame([
+            {
+                "label": "This Week",
+                "date": data["recent_7d"]["date"],
+                "total": data["recent_7d"]["total"],
+                "positive": data["recent_7d"]["positive"],
+                "negative": data["recent_7d"]["negative"]
+            },
+            {
+                "label": "Last Week",
+                "date": data["prev_7d"]["date"],
+                "total": data["prev_7d"]["total"],
+                "positive": data["prev_7d"]["positive"],
+                "negative": data["prev_7d"]["negative"]
+            }
+        ])
+        return df, None
+    except Exception as e:
+        return pd.DataFrame(), f"❌ Failed to fetch: {e}"
+    
 def fetch_sentiment_topic_summary():
-    conn, cursor = None, None
     try:
         conn = psycopg2.connect(**DB_CONFIG)
         cursor = conn.cursor()
@@ -174,8 +189,32 @@ def fetch_sentiment_topic_summary():
         if cursor: cursor.close()
         if conn: conn.close()
 
-def fetch_top10_symbols_this_week():
+def fetch_overall_sentiment_summary():
     conn, cursor = None, None
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT 
+            topic_date, 
+            pos_count,
+            neg_count
+            FROM dbt_us_stock_data_production.reddit_comment_us_market_daily
+        """)
+        rows = cursor.fetchall()
+        return pd.DataFrame(rows, columns=["published_at", "total_pc", "total_nc"])
+    except Exception as e:
+        return pd.DataFrame([{"error": str(e)}])
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+
+def fetch_top10_symbols_df():
+            df, _ = fetch_top10_symbols_this_week()
+            return df
+            
+# ----- Stock Data -----
+def fetch_top10_symbols_this_week():
     try:
         conn = psycopg2.connect(**DB_CONFIG)
         cursor = conn.cursor()
@@ -208,7 +247,8 @@ def fetch_top10_symbols_this_week():
             return pd.DataFrame(), "No data found"
 
         df = pd.DataFrame(rows, columns=["🔥 Symbol", "💬 Comments", "👍 Positive", "👎 Negative"])
-        return df
+        summary = "\n".join([f"{r[0]} | {r[1]} | {r[2]} | {r[3]}" for r in rows])
+        return df,summary
 
     except Exception as e:
         return pd.DataFrame(), f"Database error: {e}"
@@ -218,7 +258,6 @@ def fetch_top10_symbols_this_week():
         if conn: conn.close()
 
 def fetch_top5_sectors_this_week():
-    conn, cursor = None, None
     try:
         conn = psycopg2.connect(**DB_CONFIG)
         cursor = conn.cursor()
@@ -250,7 +289,9 @@ def fetch_top5_sectors_this_week():
             return pd.DataFrame(), "No this week data"
 
         df = pd.DataFrame(rows, columns=["sector", "total_comments", "total_pos", "total_neg"])
-        return df, None
+
+        summary = "\n".join([f"{r[0]} | {r[1]} | {r[2]} | {r[3]}" for r in rows])
+        return df, summary
 
     except Exception as e:
         return pd.DataFrame(), f"Database error: {e}"
@@ -258,18 +299,3 @@ def fetch_top5_sectors_this_week():
     finally:
         if cursor: cursor.close()
         if conn: conn.close()
-
-def search_news_for_keywords(keywords, max_articles=3):
-    
-    NEWS_API_KEY = os.getenv("NEWS_API_KEY")
-    query = " OR ".join(keywords[:5])
-    from_date = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
-    url = f"https://newsapi.org/v2/everything?q={query}&sortBy=publishedAt&from={from_date}&pageSize={max_articles}&apiKey={NEWS_API_KEY}"
-    try:
-        response = requests.get(url, timeout=10)
-        articles = response.json().get("articles", [])
-        if not articles:
-            return "No news found."
-        return "\n\n".join([f"【{a['title']}】\n{a['description']}\nLink: {a['url']}" for a in articles])
-    except Exception as e:
-        return f"News search error: {e}"

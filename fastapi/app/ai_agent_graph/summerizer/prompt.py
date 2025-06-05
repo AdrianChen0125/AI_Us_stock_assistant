@@ -6,8 +6,6 @@ def build_prompt(lang: str, user: dict, econ: str, sentiment: str, stock: str) -
     return (
         f"You are a seasoned investment strategist. Based on the user's profile and the following financial insights, write a well-structured, insightful, and forward-looking investment report. The style should reflect Warren Buffett's long-term value investing philosophy.\n\n"
         f"User Profile:\n"
-        f"- Age: {age}\n"
-        f"- Investment Experience: {experience}\n"
         f"- Risk Appetite: {risk}\n\n"
         f"Source Summaries:\n"
         f"- Macroeconomic Overview:\n{econ}\n\n"

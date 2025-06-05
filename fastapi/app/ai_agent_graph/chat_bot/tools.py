@@ -8,7 +8,7 @@ from langchain_community.tools import Tool
 from langchain_community.tools import WikipediaQueryRun
 from langchain_community.utilities import WikipediaAPIWrapper
 
-from services.rag_service import process_rag_question
+from services.rag_service import retrieve_relevant_context
 from async_db import get_pgvector_conn
 
 # ----------------------------
@@ -79,14 +79,26 @@ news_tool = Tool(
 
 def rag_tool_sync(query: str) -> str:
     """Query internal vector DB for relevant domain knowledge."""
+    
     async def wrapper():
         db = await get_pgvector_conn()
         try:
-            result = await process_rag_question(query, top_k=5, db=db)
-            return result["answer"]
+            result = await retrieve_relevant_context(query, top_k=5, db=db)
+            answer = result.get("answer", "")
+            context = result.get("context_used", [])
+
+            urls = [item.url for item in context if getattr(item, "url", None)]
+
+            if urls:
+                unique_urls = list(dict.fromkeys(urls))  
+                url_section = "\n\nSources:\n" + "\n".join(unique_urls)
+            else:
+                url_section = ""
+
+            return answer + url_section
         finally:
             await db.close()
-    
+
     return asyncio.run(wrapper())
 
 rag_tool = Tool(

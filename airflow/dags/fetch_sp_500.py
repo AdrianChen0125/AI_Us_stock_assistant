@@ -131,6 +131,7 @@ with DAG(
     dag_id = 'fetch_sp500',
     default_args = default_args,
     start_date = datetime(2025,4,1),
+    max_active_runs = 1,
     schedule_interval = '@daily',
     catchup = False,
     tags = ['raw','sp500'],

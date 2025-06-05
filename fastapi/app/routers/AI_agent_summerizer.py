@@ -10,9 +10,7 @@ class ReportRequest(BaseModel):
     economic_summary: str
     sentiment_summary: str
     stock_summary: str
-    age: str = "18-25"
-    experience: str = "Beginner"
-    risk: str = "Moderate"
+    risk: str 
 
 # 回傳格式
 class ReportResponse(BaseModel):
@@ -36,12 +34,12 @@ async def generate_ai_report(req: ReportRequest):
             "sentiment_summary": req.sentiment_summary,
             "stock_summary": req.stock_summary,
             "user_profile": {
-                "age": req.age,
-                "experience": req.experience,
                 "risk": req.risk
             },
             "report": ""
         }
+        
+        print(state)
 
         result = graph.invoke(state)
         return {"report": result["report"]}

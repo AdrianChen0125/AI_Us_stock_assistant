@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from routers import user_profiles
 from routers import economic_index
 from routers import market_price
-from routers import stock_recommend
+# from routers import stock_recommend
 from routers import sp500
 
 # Routers - Market Sentiment
@@ -18,9 +18,10 @@ from routers import Sentiment_Sp500_Sector
 from routers import AI_agent_recommendation
 from routers import AI_agent_economic_report
 from routers import AI_agent_market_sentiment_report
-from routers import AI_agent_rag
 from routers import AI_agent_chat_bot
 from routers import AI_agent_summerizer
+
+from routers import lightfm_recommender
 
 # Auth
 from routers import auth
@@ -54,7 +55,7 @@ app.include_router(auth.router)
 app.include_router(user_profiles.router)
 app.include_router(economic_index.router)
 app.include_router(market_price.router)
-app.include_router(stock_recommend.router)
+# app.include_router(stock_recommend.router)
 app.include_router(sp500.router)
 app.include_router(Sentiment_Reddit.router)
 app.include_router(Sentiment_Topic.router)
@@ -63,9 +64,9 @@ app.include_router(Sentiment_Sp500_Sector.router)
 app.include_router(AI_agent_recommendation.router)
 app.include_router(AI_agent_economic_report.router)
 app.include_router(AI_agent_market_sentiment_report.router)
-app.include_router(AI_agent_rag.router)
 app.include_router(AI_agent_chat_bot.router)
 app.include_router(AI_agent_summerizer.router)
+app.include_router(lightfm_recommender.router)
 
 # === Add Bearer Auth to OpenAPI ===
 from fastapi.openapi.utils import get_openapi

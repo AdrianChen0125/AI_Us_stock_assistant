@@ -75,7 +75,7 @@ def train_model(ti):
                 input_example=input_example,
             )
 
-            # ✅ 傳出 run_id
+            # 傳出 run_id
             ti.xcom_push(key="run_id", value=run.info.run_id)
 
 def push_model(ti):
@@ -99,7 +99,7 @@ def push_model(ti):
 with DAG(
     dag_id="stock_recommender_model_training",
     default_args={"retries": 1},
-    schedule_interval="0 2 * * 6",  
+    schedule_interval=None,  
     start_date=days_ago(1),
     max_active_runs = 1,
     catchup=False,

@@ -18,7 +18,7 @@ EXCLUDE_PREFIXES = [
     "/market_price",
     "/stock_data",
     "/sentiment",
-    "/recommend",
+    "/recommend"
 ]
 
 def should_skip_auth(path: str) -> bool:

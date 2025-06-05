@@ -35,6 +35,7 @@ sentence-transformers
 
 # === News Crawling ===
 lxml[html_clean]
+beautifulsoup4
 newspaper3k
 
 # === AWS SDK / Support ===
