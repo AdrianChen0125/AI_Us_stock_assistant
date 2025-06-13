@@ -10,6 +10,7 @@ def main_tab(user_profile_state, access_token):
             with gr.Column(scale=1):
                 # gr.Image(show_image("Intro_page.png"), width=900, height=850, type="pil")
                  gr.Video(video_path, autoplay=True, width=900, height=850)
+
             with gr.Column(scale=1):
                 gr.Markdown("### 🔐 Login First")
 
@@ -17,7 +18,6 @@ def main_tab(user_profile_state, access_token):
                 password = gr.Textbox(label="Password", type="password")
                 login_btn = gr.Button("Login")
                 login_status = gr.Markdown()
-                
                 access_token_box = gr.Textbox(visible=False)
 
                 with gr.Column(visible=False) as form_section:

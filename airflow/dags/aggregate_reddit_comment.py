@@ -28,22 +28,35 @@ def extract_and_aggregate(**kwargs):
 def generate_topic_summaries(**kwargs):
     records = kwargs['ti'].xcom_pull(key='aggregated_data')
     summaries = []
-
     for row in records:
         topic_date, topic_tag, keywords, comments_count, neg_count, pos_count = row
+
+        if pos_count > neg_count:
+            sentiment = "positive"
+        elif neg_count > pos_count:
+            sentiment = "negative"
+        else:
+            sentiment = "neutral"
+
         prompt = (
-        f"""
-        These keywords are collected from Reddit comments related to U.S. stock market discussions, "
-        specifically from Wall Street-focused subreddits. 
-        Generate a simple title in one or two sentences and suitable for social media based on the following keywords: {', '.join(keywords)}
-        """
-)
+            f"""
+            These keywords are collected from Reddit comments related to U.S. stock market discussions, 
+            specifically from Wall Street-focused subreddits. The overall sentiment of the discussion is {sentiment}.
+            
+            Based on the following keywords, generate a short, engaging title (1–2 sentences) that reflects both 
+            the sentiment and the topic. The title should be suitable for social media and no emoji.
+            
+            Keywords: {', '.join(keywords)}
+            """
+        )
+
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         
         response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": prompt}]
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt}]
         )
+        
         topic_summary = response.choices[0].message.content.strip()
 
         summaries.append({
@@ -57,7 +70,6 @@ def generate_topic_summaries(**kwargs):
         })
 
     kwargs['ti'].xcom_push(key='summaries', value=summaries)
-
 def insert_into_table(**kwargs):
     pg_hook = PostgresHook(postgres_conn_id='aws_pg')
     summaries = kwargs['ti'].xcom_pull(key='summaries')

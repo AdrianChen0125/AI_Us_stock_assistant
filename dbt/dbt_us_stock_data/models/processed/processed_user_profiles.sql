@@ -4,12 +4,10 @@ WITH source_data AS (
 
     SELECT
         id,
-        created_at,
-        NULLIF(TRIM(age), '') AS age,                   
-        NULLIF(TRIM(experience), '') AS experience,      
+        created_at,                      
         interest,
-        NULLIF(TRIM(sources), '') AS sources,            
-        NULLIF(TRIM(risk), '') AS risk,                  
+        NULLIF(TRIM(risk), '') AS risk, 
+        NULLIF(TRIM(holdings), '') AS holdings,            
         NULLIF(TRIM(language), '') AS language,          
         LOWER(NULLIF(TRIM(email), '')) AS email          
     FROM 

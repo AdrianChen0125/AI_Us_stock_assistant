@@ -204,7 +204,8 @@ with DAG(
     trigger_summary = TriggerDagRunOperator(
         task_id='trigger_reddit_topic_summary',
         trigger_dag_id='reddit_topic_summary',
-        wait_for_completion=False,
+        execution_date="{{ execution_date }}",
+        wait_for_completion=False
     )
 
     t1 >> t2 >> t3 >> t4 >> trigger_summary

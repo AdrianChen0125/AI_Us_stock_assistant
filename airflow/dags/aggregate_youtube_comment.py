@@ -30,21 +30,35 @@ def extract_and_aggregate(**kwargs):
 def generate_topic_summaries(**kwargs):
     records = kwargs['ti'].xcom_pull(key='aggregated_data')
     summaries = []
-
+    
     for row in records:
         topic_date, topic_tag, keywords, comments_count, neg_count, pos_count = row
+
+        if pos_count > neg_count:
+            sentiment = "positive"
+        elif neg_count > pos_count:
+            sentiment = "negative"
+        else:
+            sentiment = "neutral"
+
         prompt = (
-        f"""
-        These keywords are collected from Youtube comments related to U.S. stock market discussions, " 
-        Generate a simple title in one or two sentences and suitable for social media based on the following keywords: {', '.join(keywords)}
-        """
-)
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        
-        response = client.chat.completions.create(
-        model="gpt-4",
-        messages=[{"role": "user", "content": prompt}]
+            f"""
+            These keywords are collected from YouTube comments related to U.S. stock market discussions.
+            The overall sentiment of the conversation is {sentiment}.
+            
+            Based on the following keywords, generate a short, engaging, and sentiment-aware title in one or two sentences.
+            The title should be suitable for social media and reflect the tone of the discussion.
+            
+            Keywords: {', '.join(keywords)}
+            """
         )
+        
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt}]
+        )
+
         topic_summary = response.choices[0].message.content.strip()
 
         summaries.append({
@@ -57,12 +71,13 @@ def generate_topic_summaries(**kwargs):
             'pos_count': pos_count
         })
 
+
     kwargs['ti'].xcom_push(key='summaries', value=summaries)
 
 def insert_into_table(**kwargs):
     pg_hook = PostgresHook(postgres_conn_id='aws_pg')
     summaries = kwargs['ti'].xcom_pull(key='summaries') 
-    execution_date = kwargs['execution_date'].date()
+    execution_date = kwargs['ds']
     
     insert_query = """
         INSERT INTO processed_data.youtube_topic (
@@ -109,17 +124,20 @@ with DAG(
 
     extract_task = PythonOperator(
         task_id='extract_and_aggregate',
-        python_callable=extract_and_aggregate
-    )
+        python_callable=extract_and_aggregate,
+        provide_context=True 
+            )
 
     summary_task = PythonOperator(
         task_id='generate_topic_summaries',
-        python_callable=generate_topic_summaries
+        python_callable=generate_topic_summaries,
+        provide_context=True
     )
 
     insert_task = PythonOperator(
         task_id='insert_into_reddit_topic',
-        python_callable=insert_into_table
+        python_callable=insert_into_table,
+        provide_context=True
     )
 
     extract_task >> summary_task >> insert_task

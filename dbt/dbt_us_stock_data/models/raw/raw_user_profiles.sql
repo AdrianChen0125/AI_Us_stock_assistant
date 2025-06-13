@@ -3,11 +3,9 @@
 SELECT
     id,
     created_at,
-    age,
-    experience,
-    interest,
-    sources,
     risk,
+    interest,
+    holdings,
     language,
     email
 FROM

@@ -9,7 +9,7 @@ async def retrieve_relevant_context(question: str, top_k: int, db):
     # 1. Encode the question into a vector
     vector_list = model.encode([question])[0].tolist()
     vector = f"[{', '.join(str(x) for x in vector_list)}]"
-
+    print(vector)
     # 2. Retrieve top-k similar chunks with metadata
     query = """
     SELECT 
@@ -18,7 +18,7 @@ async def retrieve_relevant_context(question: str, top_k: int, db):
     FROM rag_docs.news_chunks c
     JOIN rag_docs.news_articles a 
         ON c.article_id = a.id
-    ORDER BY c.embedding <-> $1
+    ORDER BY c.embedding <=> $1::vector
     LIMIT $2
     """
     await db.execute("SET enable_seqscan = off")

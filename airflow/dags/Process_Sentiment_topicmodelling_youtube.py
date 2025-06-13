@@ -108,6 +108,7 @@ def analyze_sentiment(text):
 
 def run_bertopic(**kwargs):
     comments = kwargs['ti'].xcom_pull(key='cleaned_comments')
+    print(len(comments))
 
     # If number of comments exceeds 5000, randomly sample 5000
     if len(comments) > 5000:
@@ -117,7 +118,6 @@ def run_bertopic(**kwargs):
     texts = [c['text'] for c in comments]
     ids = [c['comment_id'] for c in comments]
 
-    # Decide whether to specify number of topics based on number of comments
 
     if len(comments) < 1000:
         
@@ -219,6 +219,7 @@ with DAG(
     trigger_summary = TriggerDagRunOperator(
         task_id='trigger_youtube_topic_summary',
         trigger_dag_id='youtube_topic_summary',
+        execution_date="{{ execution_date }}",
         wait_for_completion=False,
     )
 
